@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+This file is used by the publish/package process of your Web project. You can customize the behavior of this process
+by editing this MSBuild file. In order to learn more about this please visit http://go.microsoft.com/fwlink/?LinkID=208121. 
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <TimeStampOfAssociatedLegacyPublishXmlFile />
+    <_PublishTargetUrl>E:\dev\phaser\publish</_PublishTargetUrl>
+  </PropertyGroup>
+  <ItemGroup>
+    <File Include="app.css">
+      <publishTime>01/05/2016 23:28:12</publishTime>
+    </File>
+    <File Include="app.js">
+      <publishTime>01/24/2016 21:57:46</publishTime>
+    </File>
+    <File Include="bin/PhaserTest001.dll">
+      <publishTime>01/24/2016 22:09:14</publishTime>
+    </File>
+    <File Include="index.html">
+      <publishTime>01/24/2016 16:17:09</publishTime>
+    </File>
+    <File Include="phaser.js">
+      <publishTime>01/05/2016 23:30:03</publishTime>
+    </File>
+    <File Include="phaser.min.js">
+      <publishTime>01/05/2016 23:30:03</publishTime>
+    </File>
+    <File Include="res/cfield.png">
+      <publishTime>01/24/2016 13:04:19</publishTime>
+    </File>
+    <File Include="res/phaser-logo-small.png">
+      <publishTime>01/05/2016 23:36:50</publishTime>
+    </File>
+    <File Include="res/square_blue.png">
+      <publishTime>01/24/2016 13:02:28</publishTime>
+    </File>
+    <File Include="res/square_green.png">
+      <publishTime>01/23/2016 18:50:23</publishTime>
+    </File>
+    <File Include="res/square_red.png">
+      <publishTime>01/23/2016 18:50:20</publishTime>
+    </File>
+    <File Include="res/square_stone.png">
+      <publishTime>01/23/2016 18:50:38</publishTime>
+    </File>
+    <File Include="res/square_wood.png">
+      <publishTime>01/23/2016 18:50:52</publishTime>
+    </File>
+    <File Include="res/square_yellow.png">
+      <publishTime>01/23/2016 18:50:33</publishTime>
+    </File>
+    <File Include="web.config">
+      <publishTime>01/24/2016 21:58:15</publishTime>
+    </File>
+  </ItemGroup>
+</Project>
