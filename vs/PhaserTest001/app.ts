@@ -41,6 +41,8 @@ module GameCurling {
     export class TitleScreenState extends Phaser.State {
         private spaceKey: Phaser.Key;
 
+        private sfx: Phaser.Sound;
+
         game: Phaser.Game;
 
         constructor() {
@@ -49,6 +51,7 @@ module GameCurling {
 
         preload() {
             this.game.load.image("title", "res/title.png");
+            this.game.load.audio("click", "res/sfx/battery.mp3");
         }
 
         create() {
@@ -57,15 +60,20 @@ module GameCurling {
 
             this.spaceKey = this.game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
             this.spaceKey.onDown.add(this.titleClicked, this);
+
+            this.sfx = this.game.add.audio("click");
         }
 
         titleClicked() {
+            this.sfx.play();
             this.game.state.start("GameRunningState");
         }
     };
 
     export class EndGameScreenState extends Phaser.State {
         private spaceKey: Phaser.Key;
+
+        private sfx: Phaser.Sound;
 
         game: Phaser.Game;
         textGameOver: Phaser.Text;
@@ -83,10 +91,12 @@ module GameCurling {
 
         preload() {
             this.game.load.image("bg", "res/empty.png");
+            this.game.load.audio("click", "res/sfx/battery.mp3");
         }
 
         create() {
             this.game.add.sprite(0, 0, "bg");
+            this.sfx = this.game.add.audio("click");
 
             let style = { font: "bold 65px Courier", fill: "#fff", boundsAlignH: "center", boundsAlignV: "middle" };
             this.textGameOver = this.game.add.text(0, 0, "ВОТ И ВСЕ", style);
@@ -110,6 +120,7 @@ module GameCurling {
         }
 
         titleClicked() {
+            this.sfx.play();
             this.game.state.start("TitleScreenState");
         }
     };
@@ -134,6 +145,12 @@ module GameCurling {
         private lockInput: boolean = false;
         private aw: ANIMATION_WAITER = new ANIMATION_WAITER;
         private dummySprite: Phaser.Sprite;
+
+        private sfxBattery: Phaser.Sound;
+        private sfxNumKey: Phaser.Sound;
+        private sfxWall: Phaser.Sound;
+        private sfxCells: Phaser.Sound;
+        private sfxPistol: Phaser.Sound;
 
         constructor() {
             super();
@@ -171,6 +188,7 @@ module GameCurling {
         }
 
         ShiftRowLeft() {
+            this.sfxWall.play();
             let shifted = this.row.shift();
             this.row.push(shifted);
             this.row.forEach((spr, idx) => {
@@ -181,6 +199,8 @@ module GameCurling {
         }
 
         ShiftRowRight() {
+            this.sfxWall.play();
+
             let popped = this.row.pop();
             this.row.unshift(popped);
             this.row.forEach((spr, idx) => {
@@ -191,6 +211,8 @@ module GameCurling {
         }
 
         DropBlocks() {
+            this.sfxBattery.play();
+
             this.row.forEach((spr, idx) => {
                 this.field[idx] ? this.field[idx] : this.field[idx] = []; // allocate new line
                 let fcy = this.field[idx].filter((num) => { return num.color >= 0; }).length;
@@ -296,6 +318,8 @@ module GameCurling {
                         spr.destroy();
                     }, this);
 
+                    this.sfxPistol.play();
+
                     localPoints += colorspace.length;
                 }
             }
@@ -370,6 +394,12 @@ module GameCurling {
             this.game.load.image('b5', 'res/square_yellow.png');
 
             this.game.load.image('field', 'res/cfield.png');
+
+            this.game.load.audio("sfx_battery", "res/sfx/battery.mp3");
+            this.game.load.audio("sfx_numkey", "res/sfx/numkey.mp3");
+            this.game.load.audio("sfx_wall", "res/sfx/wall.mp3");
+            this.game.load.audio("sfx_cells", "res/sfx/need_cells.mp3");
+            this.game.load.audio("sfx_pistol", "res/sfx/pistol.mp3");
         }
 
         create() {
@@ -413,10 +443,17 @@ module GameCurling {
                 -1000,
                 -1000,
                 "b" + this.game.rnd.between(0, 5));
+
+            this.sfxBattery = this.game.add.audio("sfx_battery");
+            this.sfxNumKey = this.game.add.audio("sfx_numkey");
+            this.sfxWall = this.game.add.audio("sfx_wall");
+            this.sfxCells = this.game.add.audio("sfx_cells");
+            this.sfxPistol = this.game.add.audio("sfx_pistol");
         }
 
         update() {
             if (this.maxRow >= this.TILE_ROWS) {
+                this.sfxCells.play();
                 // game over
                 // play animation (remove all blocks in some way)
                 this.game.state.start("EndGameState", true, false, this.points);
