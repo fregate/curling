@@ -19,10 +19,12 @@ var GameCurling;
         }
         ANIMATION_WAITER.prototype.addRef = function (cb, ctx) {
             this.refs++;
+            //            console.log("AW add " + this.refs);
             if (cb !== null && typeof cb == 'function')
                 cb.apply(ctx);
         };
         ANIMATION_WAITER.prototype.releaseRef = function (cb, ctx) {
+            //            console.log("AW release " + this.refs);
             this.refs--;
             if (this.refs == 0 && cb !== null && typeof cb == 'function')
                 cb.apply(ctx);
@@ -40,14 +42,17 @@ var GameCurling;
         }
         TitleScreenState.prototype.preload = function () {
             this.game.load.image("title", "curl/res/title.png");
+            this.game.load.audio("click", "curl/res/sfx/battery.mp3");
         };
         TitleScreenState.prototype.create = function () {
             this.game.add.sprite(0, 0, "title");
             this.input.onTap.addOnce(this.titleClicked, this);
             this.spaceKey = this.game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
             this.spaceKey.onDown.add(this.titleClicked, this);
+            this.sfx = this.game.add.audio("click");
         };
         TitleScreenState.prototype.titleClicked = function () {
+            this.sfx.play();
             this.game.state.start("GameRunningState");
         };
         return TitleScreenState;
@@ -64,9 +69,11 @@ var GameCurling;
         };
         EndGameScreenState.prototype.preload = function () {
             this.game.load.image("bg", "curl/res/empty.png");
+            this.game.load.audio("click", "curl/res/sfx/battery.mp3");
         };
         EndGameScreenState.prototype.create = function () {
             this.game.add.sprite(0, 0, "bg");
+            this.sfx = this.game.add.audio("click");
             var style = { font: "bold 65px Courier", fill: "#fff", boundsAlignH: "center", boundsAlignV: "middle" };
             this.textGameOver = this.game.add.text(0, 0, "ВОТ И ВСЕ", style);
             this.textGameOver.setTextBounds(0, 150, this.game.width, 100);
@@ -84,6 +91,7 @@ var GameCurling;
             this.spaceKey.onDown.add(this.titleClicked, this);
         };
         EndGameScreenState.prototype.titleClicked = function () {
+            this.sfx.play();
             this.game.state.start("TitleScreenState");
         };
         return EndGameScreenState;
@@ -123,6 +131,7 @@ var GameCurling;
         };
         SimpleGame.prototype.ShiftRowLeft = function () {
             var _this = this;
+            this.sfxWall.play();
             var shifted = this.row.shift();
             this.row.push(shifted);
             this.row.forEach(function (spr, idx) {
@@ -131,6 +140,7 @@ var GameCurling;
         };
         SimpleGame.prototype.ShiftRowRight = function () {
             var _this = this;
+            this.sfxWall.play();
             var popped = this.row.pop();
             this.row.unshift(popped);
             this.row.forEach(function (spr, idx) {
@@ -139,6 +149,7 @@ var GameCurling;
         };
         SimpleGame.prototype.DropBlocks = function () {
             var _this = this;
+            this.sfxBattery.play();
             this.row.forEach(function (spr, idx) {
                 _this.field[idx] ? _this.field[idx] : _this.field[idx] = []; // allocate new line
                 var fcy = _this.field[idx].filter(function (num) { return num.color >= 0; }).length;
@@ -156,7 +167,9 @@ var GameCurling;
                 _this.field[fldidx] = line;
                 line.forEach(function (val, idx) {
                     var spr = _this.fieldSprites.filter(function (s) { return s.key == val.key; }, _this)[0].sprt;
-                    _this.TweenSpritePosition(spr, spr.position.x, _this.SCREEN_HEIGHT - _this.TILE_SPACE - (idx * (_this.TILE_SPACE + _this.TILE_SIZE)), null, _this.CheckField);
+                    if (spr.position.y != _this.SCREEN_HEIGHT - _this.TILE_SPACE - (idx * (_this.TILE_SPACE + _this.TILE_SIZE))) {
+                        _this.TweenSpritePosition(spr, spr.position.x, _this.SCREEN_HEIGHT - _this.TILE_SPACE - (idx * (_this.TILE_SPACE + _this.TILE_SIZE)), null, _this.CheckField);
+                    }
                 }, _this);
             }, this);
             this.TweenSpritePosition(this.dummySprite, this.dummySprite.position.x, this.dummySprite.position.y, null, this.CheckField);
@@ -213,6 +226,7 @@ var GameCurling;
                         _this.TweenSpriteAlpha(spr, null, _this.RemoveEmptySpaces);
                         spr.destroy();
                     }, this);
+                    this.sfxPistol.play();
                     localPoints += colorspace.length;
                 }
             }
@@ -230,8 +244,7 @@ var GameCurling;
             this.TweenSprite(tw, onStartCB, onCompleteCB);
         };
         SimpleGame.prototype.TweenSpriteAlpha = function (spr, onStartCB, onCompleteCB) {
-            console.log("TweenAlpha");
-            var tw = this.game.add.tween(spr).to({ scale: .01 }, 100, Phaser.Easing.Linear.None);
+            var tw = this.game.add.tween(spr).to({ alpha: 0 }, 100, Phaser.Easing.Linear.None);
             this.TweenSprite(tw, onStartCB, onCompleteCB);
         };
         SimpleGame.prototype.TweenSprite = function (tw, onStartCB, onCompleteCB) {
@@ -274,6 +287,11 @@ var GameCurling;
             this.game.load.image('b4', 'curl/res/square_wood.png');
             this.game.load.image('b5', 'curl/res/square_yellow.png');
             this.game.load.image('field', 'curl/res/cfield.png');
+            this.game.load.audio("sfx_battery", "curl/res/sfx/battery.mp3");
+            this.game.load.audio("sfx_numkey", "curl/res/sfx/numkey.mp3");
+            this.game.load.audio("sfx_wall", "curl/res/sfx/wall.mp3");
+            this.game.load.audio("sfx_cells", "curl/res/sfx/need_cells.mp3");
+            this.game.load.audio("sfx_pistol", "curl/res/sfx/pistol.mp3");
         };
         SimpleGame.prototype.create = function () {
             // constants
@@ -303,9 +321,15 @@ var GameCurling;
             var style = { font: "bold 65px Courier", fill: "#ff0000", align: "right" };
             this.textValue = this.game.add.text(0, 0, "0", style);
             this.dummySprite = this.game.add.sprite(-1000, -1000, "b" + this.game.rnd.between(0, 5));
+            this.sfxBattery = this.game.add.audio("sfx_battery");
+            this.sfxNumKey = this.game.add.audio("sfx_numkey");
+            this.sfxWall = this.game.add.audio("sfx_wall");
+            this.sfxCells = this.game.add.audio("sfx_cells");
+            this.sfxPistol = this.game.add.audio("sfx_pistol");
         };
         SimpleGame.prototype.update = function () {
             if (this.maxRow >= this.TILE_ROWS) {
+                this.sfxCells.play();
                 // game over
                 // play animation (remove all blocks in some way)
                 this.game.state.start("EndGameState", true, false, this.points);
