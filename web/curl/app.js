@@ -159,6 +159,7 @@ var GameCurling;
                     _this.TweenSpritePosition(spr, spr.position.x, _this.SCREEN_HEIGHT - _this.TILE_SPACE - (idx * (_this.TILE_SPACE + _this.TILE_SIZE)), null, _this.CheckField);
                 }, _this);
             }, this);
+            this.TweenSpritePosition(this.dummySprite, this.dummySprite.position.x, this.dummySprite.position.y, null, this.CheckField);
         };
         SimpleGame.prototype.CheckField = function () {
             var _this = this;
@@ -301,6 +302,7 @@ var GameCurling;
             this.maxRow = 0;
             var style = { font: "bold 65px Courier", fill: "#ff0000", align: "right" };
             this.textValue = this.game.add.text(0, 0, "0", style);
+            this.dummySprite = this.game.add.sprite(-1000, -1000, "b" + this.game.rnd.between(0, 5));
         };
         SimpleGame.prototype.update = function () {
             if (this.maxRow >= this.TILE_ROWS) {
