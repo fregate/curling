@@ -39,7 +39,7 @@ var GameCurling;
             _super.call(this);
         }
         TitleScreenState.prototype.preload = function () {
-            this.game.load.image("title", "res/title.png");
+            this.game.load.image("title", "curl/res/title.png");
         };
         TitleScreenState.prototype.create = function () {
             this.game.add.sprite(0, 0, "title");
@@ -63,7 +63,7 @@ var GameCurling;
             this.points = pts;
         };
         EndGameScreenState.prototype.preload = function () {
-            this.game.load.image("bg", "res/empty.png");
+            this.game.load.image("bg", "curl/res/empty.png");
         };
         EndGameScreenState.prototype.create = function () {
             this.game.add.sprite(0, 0, "bg");
