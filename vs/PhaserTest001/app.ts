@@ -10,11 +10,13 @@ module GameCurling {
 
         addRef(cb: Function, ctx: any) {
             this.refs++;
+//            console.log("AW add " + this.refs);
             if (cb !== null && typeof cb == 'function')
                 cb.apply(ctx);
         }
 
         releaseRef(cb: Function, ctx: any) {
+//            console.log("AW release " + this.refs);
             this.refs--;
             if (this.refs == 0 && cb !== null && typeof cb == 'function')
                 cb.apply(ctx);
@@ -131,6 +133,7 @@ module GameCurling {
 
         private lockInput: boolean = false;
         private aw: ANIMATION_WAITER = new ANIMATION_WAITER;
+        private dummySprite: Phaser.Sprite;
 
         constructor() {
             super();
@@ -212,15 +215,25 @@ module GameCurling {
                 this.field[fldidx] = line;
                 line.forEach((val, idx) => {
                     var spr = this.fieldSprites.filter((s) => { return s.key == val.key; }, this)[0].sprt;
-                    this.TweenSpritePosition(
-                        spr,
-                        spr.position.x,
-                        this.SCREEN_HEIGHT - this.TILE_SPACE - (idx * (this.TILE_SPACE + this.TILE_SIZE)),
-                        null,
-                        this.CheckField
-                    );
+                    if (spr.position.y != this.SCREEN_HEIGHT - this.TILE_SPACE - (idx * (this.TILE_SPACE + this.TILE_SIZE))) {
+                        this.TweenSpritePosition(
+                            spr,
+                            spr.position.x,
+                            this.SCREEN_HEIGHT - this.TILE_SPACE - (idx * (this.TILE_SPACE + this.TILE_SIZE)),
+                            null,
+                            this.CheckField
+                        );
+                    }
                 }, this);
             }, this);
+
+            this.TweenSpritePosition(
+                this.dummySprite,
+                this.dummySprite.position.x,
+                this.dummySprite.position.y,
+                null,
+                this.CheckField
+            );
         }
 
         CheckField() {
@@ -306,9 +319,8 @@ module GameCurling {
         }
 
         TweenSpriteAlpha(spr: Phaser.Sprite, onStartCB?: Function, onCompleteCB?: Function) {
-            console.log("TweenAlpha");
             let tw = this.game.add.tween(spr).to(
-                { scale: .01 },
+                { alpha: 0 },
                 100, Phaser.Easing.Linear.None);
 
             this.TweenSprite(tw, onStartCB, onCompleteCB);
@@ -396,6 +408,11 @@ module GameCurling {
 
             let style = { font: "bold 65px Courier", fill: "#ff0000", align: "right" };
             this.textValue = this.game.add.text(0, 0, "0", style);
+
+            this.dummySprite = this.game.add.sprite(
+                -1000,
+                -1000,
+                "b" + this.game.rnd.between(0, 5));
         }
 
         update() {
