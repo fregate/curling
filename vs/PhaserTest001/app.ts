@@ -92,6 +92,8 @@
         preload() {
             this.game.load.image("bg", "res/empty.png");
             this.game.load.audio("click", "res/sfx/battery.mp3");
+
+            this.game.load.text("invite", "res/invite.txt");
         }
 
         create() {
@@ -107,11 +109,8 @@
             this.textRecord.setTextBounds(0, 250, this.game.width, 50);
 
             let styleoverall = { font: "20px Courier", fill: "#fff", align: "left", wordWrap: true, wordWrapWidth: this.game.width - 30 };
-            this.textRecord = this.game.add.text(30, 350, "Не стоит отчаиваться! Если что, то приезжай в керлинг-клуб \
-'Пингвин' и там сможешь по- настоящему покатать камни и потереть щеткой!\n\n\
-Жду тебя в субботу к 13:30 прямо там (это что бы время было переодеться).\n\
-Адрес: Станционная, 102 (это практически Экспоцентр)\n\n\
-Возьми удобную одежду - это же спорт!", styleoverall);
+            let txt = this.game.cache.getText('invite');
+            this.textRecord = this.game.add.text(30, 350, txt, styleoverall);
 
             this.input.onTap.addOnce(this.titleClicked, this);
 
