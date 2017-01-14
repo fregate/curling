@@ -1,4 +1,4 @@
-module GameCurling {
+﻿module GameCurling {
 
     class SETTINGS {
         SCREEN_WIDTH: number = 600;
@@ -137,6 +137,8 @@ module GameCurling {
 
         private OFFSET_FIELD: number = 91;
 
+        private TILE_COLORS: number;
+
         private maxRow: number = 0;
         private field: FieldValue[][];
         private fieldSprites: SpriteKey[];
@@ -151,6 +153,8 @@ module GameCurling {
         private sfxWall: Phaser.Sound;
         private sfxCells: Phaser.Sound;
         private sfxPistol: Phaser.Sound;
+
+        private bonuses: number[];
 
         constructor() {
             super();
@@ -216,7 +220,7 @@ module GameCurling {
             this.row.forEach((spr, idx) => {
                 this.field[idx] ? this.field[idx] : this.field[idx] = []; // allocate new line
                 let fcy = this.field[idx].filter((num) => { return num.color >= 0; }).length;
-                this.field[idx][fcy] = { color: parseInt(spr.key.toString()[1]), key: this.sprtId };
+                this.field[idx][fcy] = { color: this.ParseColorFromSprite(spr), key: this.sprtId };
 
                 spr.anchor.set(0, 1);
                 this.TweenSpritePosition(
@@ -266,6 +270,7 @@ module GameCurling {
                         continue;
 
                     let stack = [];
+                    let stackColor = -1;
                     let fc: FieldCoord = { x: x, y: y };
                     stack.push(fc);
                     let colorspace = [];
@@ -274,35 +279,37 @@ module GameCurling {
                         if (!ccc)
                             continue;
 
-                        let fval = this.field[ccc.x][ccc.y].color;
+                        if (stackColor < 0)
+                            stackColor = this.field[ccc.x][ccc.y].color;
+
                         colorspace.push(ccc);
 
                         // check north
-                        if ((ccc.y < this.TILE_ROWS - 1) && (this.field[ccc.x][ccc.y + 1] && this.field[ccc.x][ccc.y + 1].color == fval)) {
+                        if ((ccc.y < this.TILE_ROWS - 1) && this.CheckColor(ccc.x, ccc.y + 1, stackColor)) {
                             var nc: FieldCoord = { x: ccc.x, y: ccc.y + 1 };
                             // check for not in colorspace
-                            if (colorspace.filter((csc, idx) => { return csc.x == nc.x && csc.y == nc.y; }, this).length == 0)
+                            if (this.FilterFieldCoord(nc, colorspace))
                                 stack.push(nc);
                         }
 
                         // check south
-                        if (ccc.y > 0 && (this.field[ccc.x][ccc.y - 1] && this.field[ccc.x][ccc.y - 1].color == fval)) {
+                        if (ccc.y > 0 && this.CheckColor(ccc.x, ccc.y - 1, stackColor)) {
                             var nc: FieldCoord = { x: ccc.x, y: ccc.y - 1 };
-                            if (colorspace.filter((csc, idx) => { return csc.x == nc.x && csc.y == nc.y; }, this).length == 0)
+                            if (this.FilterFieldCoord(nc, colorspace))
                                 stack.push(nc);
                         }
 
                         // check west
-                        if (ccc.x > 0 && (this.field[ccc.x - 1][ccc.y] && this.field[ccc.x - 1][ccc.y].color == fval)) {
+                        if (ccc.x > 0 && this.CheckColor(ccc.x - 1, ccc.y, stackColor)) {
                             var nc: FieldCoord = { x: ccc.x - 1, y: ccc.y };
-                            if (colorspace.filter((csc, idx) => { return csc.x == nc.x && csc.y == nc.y; }, this).length == 0)
+                            if (this.FilterFieldCoord(nc, colorspace))
                                 stack.push(nc);
                         }
 
                         // check east
-                        if ((ccc.x < this.TILE_COLUMNS - 1) && (this.field[ccc.x + 1][ccc.y] && this.field[ccc.x + 1][ccc.y].color == fval)) {
+                        if ((ccc.x < this.TILE_COLUMNS - 1) && this.CheckColor(ccc.x + 1, ccc.y, stackColor)) {
                             var nc: FieldCoord = { x: ccc.x + 1, y: ccc.y };
-                            if (colorspace.filter((csc, idx) => { return csc.x == nc.x && csc.y == nc.y; }, this).length == 0)
+                            if (this.FilterFieldCoord(nc, colorspace))
                                 stack.push(nc);
                         }
                     }
@@ -310,17 +317,17 @@ module GameCurling {
                     if (colorspace.length < 3)
                         continue;
 
-                    colorspace.forEach((ccc) => {
-                        let fval = this.field[ccc.x][ccc.y];
-                        fval.color = -1;
-                        let spr = this.GetSprite(fval.key);
-                        this.TweenSpriteAlpha(spr, null, this.RemoveEmptySpaces);
-                        spr.destroy();
-                    }, this);
+                    if (colorspace.length >= 6) {
+                        let arr = this.CreateArray(colorspace.length - 5, 2);
+                        this.bonuses = this.bonuses.concat(arr);
+                    } else if (colorspace.length > 3) {
+                        this.bonuses.push(colorspace.length - 4);
+                    }
+
+                    let pt = this.RemoveBlocks(colorspace);
 
                     this.sfxPistol.play();
-
-                    localPoints += colorspace.length;
+                    localPoints += pt;
                 }
             }
 
@@ -330,6 +337,27 @@ module GameCurling {
                 this.points += localPoints;
                 this.textValue.text = this.points.toString();
             }
+        }
+
+        RemoveBlocks(cs: Array<FieldCoord>): number {
+            while(1) {
+                let actionBlocks = [];
+                cs.forEach((ccc, idx) => {
+                    let fval = this.field[ccc.x][ccc.y];
+                    if (fval && fval.color >= 0) {
+                        this.GetActionBlocks(ccc, cs, actionBlocks);
+                        fval.color = -1;
+                        let spr = this.GetSprite(fval.key);
+                        this.TweenSpriteAlpha(spr, null, this.RemoveEmptySpaces);
+                        spr.destroy();
+                    }
+                }, this);
+                if (actionBlocks.length == 0)
+                    break;
+                cs = cs.concat(actionBlocks);
+            }
+
+            return cs.length;
         }
 
         TweenSpritePosition(spr: Phaser.Sprite, newX: number, newY: number, onStartCB?: Function, onCompleteCB?: Function) {
@@ -385,6 +413,135 @@ module GameCurling {
             this.spawned = false;
         }
 
+        ShuffleArray(a: Array<Phaser.Sprite>) {
+            for (let i = a.length; i; i--) {
+                let j = Math.floor(Math.random() * i);
+                [a[i - 1], a[j]] = [a[j], a[i - 1]];
+            }
+        }
+
+        GenerateTopBlocks() {
+            this.row = [];
+            for (let i = 0; i < this.bonuses.length && i < this.TILE_COLUMNS; i++) {
+                this.row.push(this.game.add.sprite(0, 0, "s" + this.bonuses[i]));
+            }
+
+            for (let s = this.bonuses.length; s < this.TILE_COLUMNS; s++) {
+                this.row.push(this.game.add.sprite(0, 0, "b" + this.game.rnd.between(0, this.TILE_COLORS - 1)));
+            }
+
+            this.ShuffleArray(this.row);
+            this.row.forEach((spr, idx) => {
+                spr.position.set(
+                    this.OFFSET_FIELD + this.TILE_SPACE + idx * (this.TILE_SPACE + this.TILE_SIZE),
+                    -(this.TILE_SPACE + this.TILE_SIZE)
+                );
+                this.TweenSpritePosition(spr, spr.position.x, this.TILE_SPACE);
+            }, this);
+
+            this.bonuses = [];
+        }
+
+        ParseColorFromSprite(spr: Phaser.Sprite): number {
+            let offset = 0;
+            if(spr.key[0] == 's') {
+                offset = this.TILE_COLORS;
+            }
+
+            return parseInt(spr.key[1]) + offset;
+        }
+
+        CheckColor(x: number, y: number, c: number): boolean {
+            if (!this.field[x][y])
+                return false;
+            return (this.field[x][y].color == c || this.field[x][y].color >= this.TILE_COLORS);
+        }
+
+        // create array and initilize it. don't know how to do it right - use brutefroce slow method
+        CreateArray(len: number, val?: number): Array<number> {
+            let arr = [];
+            while (len--)
+                arr.push(val);
+
+            return arr;
+        }
+
+        GetActionBlocks(c: FieldCoord, cs: Array<FieldCoord>, ab: Array<FieldCoord>) {
+            let fval = this.field[c.x][c.y];
+            if (fval.color < this.TILE_COLORS)
+                return;
+
+            switch (fval.color) {
+                case 6: { // any color - handled automatically
+                    return;
+                }
+                case 7: { // bomb 3x3 c.x,c.y - center
+                    { // north
+                        let nc: FieldCoord = { x: c.x, y: Math.min(this.TILE_ROWS - 1, c.y + 1) };
+                        if (this.FilterFieldCoord(nc, cs) && this.FilterFieldCoord(nc, ab))
+                            ab.push(nc);
+                    }
+
+                    { // north east
+                        let nec: FieldCoord = { x: Math.min(this.TILE_COLUMNS - 1, c.x + 1), y: Math.min(this.TILE_ROWS - 1, c.y + 1) };
+                        if (this.FilterFieldCoord(nec, cs) && this.FilterFieldCoord(nec, ab))
+                            ab.push(nec);
+                    }
+
+                    { // east
+                        let ec: FieldCoord = { x: Math.min(this.TILE_COLUMNS - 1, c.x + 1), y: c.y };
+                        if (this.FilterFieldCoord(ec, cs) && this.FilterFieldCoord(ec, ab))
+                            ab.push(ec);
+                    }
+
+                    { // south east
+                        let sec: FieldCoord = { x: Math.min(this.TILE_COLUMNS - 1, c.x + 1), y: Math.max(0, c.y - 1) };
+                        if (this.FilterFieldCoord(sec, cs) && this.FilterFieldCoord(sec, ab))
+                            ab.push(sec);
+                    }
+
+                    { // south 
+                        let sc: FieldCoord = { x: c.x, y: Math.max(0, c.y - 1) };
+                        if (this.FilterFieldCoord(sc, cs) && this.FilterFieldCoord(sc, ab))
+                            ab.push(sc);
+                    }
+
+                    { // south west
+                        let swc: FieldCoord = { x: Math.max(0, c.x - 1), y: Math.max(0, c.y - 1) };
+                        if (this.FilterFieldCoord(swc, cs) && this.FilterFieldCoord(swc, ab))
+                            ab.push(swc);
+                    }
+
+                    { // west
+                        let wc: FieldCoord = { x: Math.max(0, c.x - 1), y: c.y };
+                        if (this.FilterFieldCoord(wc, cs) && this.FilterFieldCoord(wc, ab))
+                            ab.push(wc);
+                    }
+
+                    { // north west
+                        let nwc: FieldCoord = { x: Math.max(0, c.x - 1), y: Math.min(this.TILE_ROWS - 1, c.y + 1) };
+                        if (this.FilterFieldCoord(nwc, cs) && this.FilterFieldCoord(nwc, ab))
+                            ab.push(nwc);
+                    }
+
+                    break;
+                }
+                case 8: { // remove horizontal line
+                    for (let i = 0; i < this.TILE_COLUMNS; i++) {
+                        let newc: FieldCoord = { x: i, y: c.y };
+                       if (this.FilterFieldCoord(newc, cs) && this.FilterFieldCoord(newc, ab))
+                            ab.push(newc);
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        FilterFieldCoord(c: FieldCoord, arr: Array<FieldCoord>): boolean {
+            return (arr.filter((csc, idx) => { return csc.x == c.x && csc.y == c.y; }, this).length == 0);
+        }
+
         preload() {
             this.game.load.image('b0', 'res/square_green.png');
             this.game.load.image('b1', 'res/square_blue.png');
@@ -392,6 +549,11 @@ module GameCurling {
             this.game.load.image('b3', 'res/square_stone.png');
             this.game.load.image('b4', 'res/square_wood.png');
             this.game.load.image('b5', 'res/square_yellow.png');
+            this.TILE_COLORS = 6;
+
+            this.game.load.image('s0', 'res/square_any.png');
+            this.game.load.image('s1', 'res/bomb.png');
+            this.game.load.image('s2', 'res/line.png');
 
             this.game.load.image('field', 'res/cfield.png');
 
@@ -422,6 +584,8 @@ module GameCurling {
             this.field = [];
 
             this.fieldSprites = [];
+
+            this.bonuses = [];
 
             this.cursors = this.game.input.keyboard.createCursorKeys();
             this.cursors.down.onDown.add(SimpleGame.prototype.DropBlocks, this);
@@ -462,17 +626,7 @@ module GameCurling {
 
             // spawn
             if (!this.spawned) {
-                this.row = [];
-                for (let s = 0; s < this.TILE_COLUMNS; s++) {
-                    let spr = this.game.add.sprite(
-                        this.OFFSET_FIELD + this.TILE_SPACE + s * (this.TILE_SPACE + this.TILE_SIZE),
-                        -(this.TILE_SPACE + this.TILE_SIZE),
-                        "b" + this.game.rnd.between(0, 5));
-
-                    this.row.push(spr);
-                    this.TweenSpritePosition(spr, spr.position.x, this.TILE_SPACE);
-                }
-
+                this.GenerateTopBlocks();
                 this.spawned = true;
             }
 
