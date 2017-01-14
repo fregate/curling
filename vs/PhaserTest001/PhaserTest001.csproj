@@ -29,6 +29,7 @@
     <Content Include="phaser.min.js" />
     <Content Include="res\bomb.png" />
     <Content Include="res\cfield.png" />
+    <Content Include="res\invite.txt" />
     <Content Include="res\line.png" />
     <Content Include="res\sfx\battery.mp3" />
     <Content Include="res\sfx\need_cells.mp3" />
