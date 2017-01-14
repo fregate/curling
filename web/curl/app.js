@@ -39,8 +39,8 @@ var GameCurling;
             _super.call(this);
         }
         TitleScreenState.prototype.preload = function () {
-            this.game.load.image("title", "curl/res/title.png");
-            this.game.load.audio("click", "curl/res/sfx/battery.mp3");
+            this.game.load.image("title", "res/title.png");
+            this.game.load.audio("click", "res/sfx/battery.mp3");
         };
         TitleScreenState.prototype.create = function () {
             this.game.add.sprite(0, 0, "title");
@@ -66,8 +66,9 @@ var GameCurling;
             this.points = pts;
         };
         EndGameScreenState.prototype.preload = function () {
-            this.game.load.image("bg", "curl/res/empty.png");
-            this.game.load.audio("click", "curl/res/sfx/battery.mp3");
+            this.game.load.image("bg", "res/empty.png");
+            this.game.load.audio("click", "res/sfx/battery.mp3");
+            this.game.load.text("invite", "res/invite.txt");
         };
         EndGameScreenState.prototype.create = function () {
             this.game.add.sprite(0, 0, "bg");
@@ -79,11 +80,8 @@ var GameCurling;
             this.textRecord = this.game.add.text(0, 0, "Камней сломалось: " + this.points, style);
             this.textRecord.setTextBounds(0, 250, this.game.width, 50);
             var styleoverall = { font: "20px Courier", fill: "#fff", align: "left", wordWrap: true, wordWrapWidth: this.game.width - 30 };
-            this.textRecord = this.game.add.text(30, 350, "Не стоит отчаиваться! Если что, то приезжай в керлинг-клуб \
-'Пингвин' и там сможешь по- настоящему покатать камни и потереть щеткой!\n\n\
-Жду тебя в субботу к 13:30 прямо там (это что бы время было переодеться).\n\
-Адрес: Станционная, 102 (это практически Экспоцентр)\n\n\
-Возьми удобную одежду - это же спорт!", styleoverall);
+            var txt = this.game.cache.getText('invite');
+            this.textRecord = this.game.add.text(30, 350, txt, styleoverall);
             this.input.onTap.addOnce(this.titleClicked, this);
             this.spaceKey = this.game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
             this.spaceKey.onDown.add(this.titleClicked, this);
@@ -402,22 +400,22 @@ var GameCurling;
             return (arr.filter(function (csc, idx) { return csc.x == c.x && csc.y == c.y; }, this).length == 0);
         };
         SimpleGame.prototype.preload = function () {
-            this.game.load.image('b0', 'curl/res/square_green.png');
-            this.game.load.image('b1', 'curl/res/square_blue.png');
-            this.game.load.image('b2', 'curl/res/square_red.png');
-            this.game.load.image('b3', 'curl/res/square_stone.png');
-            this.game.load.image('b4', 'curl/res/square_wood.png');
-            this.game.load.image('b5', 'curl/res/square_yellow.png');
+            this.game.load.image('b0', 'res/square_green.png');
+            this.game.load.image('b1', 'res/square_blue.png');
+            this.game.load.image('b2', 'res/square_red.png');
+            this.game.load.image('b3', 'res/square_stone.png');
+            this.game.load.image('b4', 'res/square_wood.png');
+            this.game.load.image('b5', 'res/square_yellow.png');
             this.TILE_COLORS = 6;
-            this.game.load.image('s0', 'curl/res/square_any.png');
-            this.game.load.image('s1', 'curl/res/bomb.png');
-            this.game.load.image('s2', 'curl/res/line.png');
-            this.game.load.image('field', 'curl/res/cfield.png');
-            this.game.load.audio("sfx_battery", "curl/res/sfx/battery.mp3");
-            this.game.load.audio("sfx_numkey", "curl/res/sfx/numkey.mp3");
-            this.game.load.audio("sfx_wall", "curl/res/sfx/wall.mp3");
-            this.game.load.audio("sfx_cells", "curl/res/sfx/need_cells.mp3");
-            this.game.load.audio("sfx_pistol", "curl/res/sfx/pistol.mp3");
+            this.game.load.image('s0', 'res/square_any.png');
+            this.game.load.image('s1', 'res/bomb.png');
+            this.game.load.image('s2', 'res/line.png');
+            this.game.load.image('field', 'res/cfield.png');
+            this.game.load.audio("sfx_battery", "res/sfx/battery.mp3");
+            this.game.load.audio("sfx_numkey", "res/sfx/numkey.mp3");
+            this.game.load.audio("sfx_wall", "res/sfx/wall.mp3");
+            this.game.load.audio("sfx_cells", "res/sfx/need_cells.mp3");
+            this.game.load.audio("sfx_pistol", "res/sfx/pistol.mp3");
         };
         SimpleGame.prototype.create = function () {
             this.SCREEN_WIDTH = 600;
