@@ -19,12 +19,10 @@ var GameCurling;
         }
         ANIMATION_WAITER.prototype.addRef = function (cb, ctx) {
             this.refs++;
-            //            console.log("AW add " + this.refs);
             if (cb !== null && typeof cb == 'function')
                 cb.apply(ctx);
         };
         ANIMATION_WAITER.prototype.releaseRef = function (cb, ctx) {
-            //            console.log("AW release " + this.refs);
             this.refs--;
             if (this.refs == 0 && cb !== null && typeof cb == 'function')
                 cb.apply(ctx);
@@ -113,13 +111,11 @@ var GameCurling;
             this.lockInput = false;
             this.aw = new ANIMATION_WAITER;
         }
-        // handle input function
         SimpleGame.prototype.HandleTouchMouse = function (pointer) {
             if (this.lockInput) {
                 return;
             }
             if (this.bottomRect.contains(pointer.x, pointer.y)) {
-                //                this.DropRowDown();
                 this.DropBlocks();
             }
             if (this.topLeftRect.contains(pointer.x, pointer.y)) {
@@ -151,14 +147,14 @@ var GameCurling;
             var _this = this;
             this.sfxBattery.play();
             this.row.forEach(function (spr, idx) {
-                _this.field[idx] ? _this.field[idx] : _this.field[idx] = []; // allocate new line
+                _this.field[idx] ? _this.field[idx] : _this.field[idx] = [];
                 var fcy = _this.field[idx].filter(function (num) { return num.color >= 0; }).length;
-                _this.field[idx][fcy] = { color: parseInt(spr.key.toString()[1]), key: _this.sprtId };
+                _this.field[idx][fcy] = { color: _this.ParseColorFromSprite(spr), key: _this.sprtId };
                 spr.anchor.set(0, 1);
                 _this.TweenSpritePosition(spr, spr.position.x, _this.SCREEN_HEIGHT - _this.TILE_SPACE - (fcy * (_this.TILE_SPACE + _this.TILE_SIZE)), null, _this.RemoveEmptySpaces);
                 _this.fieldSprites.push({ key: _this.sprtId++, sprt: spr });
             }, this);
-            this.row = []; // clear input blocks
+            this.row = [];
         };
         SimpleGame.prototype.RemoveEmptySpaces = function () {
             var _this = this;
@@ -175,13 +171,13 @@ var GameCurling;
             this.TweenSpritePosition(this.dummySprite, this.dummySprite.position.x, this.dummySprite.position.y, null, this.CheckField);
         };
         SimpleGame.prototype.CheckField = function () {
-            var _this = this;
             var localPoints = 0;
             for (var x = 0; x < this.TILE_COLUMNS; x++) {
                 for (var y = 0; y < this.TILE_ROWS; y++) {
                     if (!this.field[x] || !this.field[x][y] || this.field[x][y].color < 0)
                         continue;
                     var stack = [];
+                    var stackColor = -1;
                     var fc = { x: x, y: y };
                     stack.push(fc);
                     var colorspace = [];
@@ -189,45 +185,42 @@ var GameCurling;
                         var ccc = stack.pop();
                         if (!ccc)
                             continue;
-                        var fval = this.field[ccc.x][ccc.y].color;
+                        if (stackColor < 0)
+                            stackColor = this.field[ccc.x][ccc.y].color;
                         colorspace.push(ccc);
-                        // check north
-                        if ((ccc.y < this.TILE_ROWS - 1) && (this.field[ccc.x][ccc.y + 1] && this.field[ccc.x][ccc.y + 1].color == fval)) {
+                        if ((ccc.y < this.TILE_ROWS - 1) && this.CheckColor(ccc.x, ccc.y + 1, stackColor)) {
                             var nc = { x: ccc.x, y: ccc.y + 1 };
-                            // check for not in colorspace
-                            if (colorspace.filter(function (csc, idx) { return csc.x == nc.x && csc.y == nc.y; }, this).length == 0)
+                            if (this.FilterFieldCoord(nc, colorspace))
                                 stack.push(nc);
                         }
-                        // check south
-                        if (ccc.y > 0 && (this.field[ccc.x][ccc.y - 1] && this.field[ccc.x][ccc.y - 1].color == fval)) {
+                        if (ccc.y > 0 && this.CheckColor(ccc.x, ccc.y - 1, stackColor)) {
                             var nc = { x: ccc.x, y: ccc.y - 1 };
-                            if (colorspace.filter(function (csc, idx) { return csc.x == nc.x && csc.y == nc.y; }, this).length == 0)
+                            if (this.FilterFieldCoord(nc, colorspace))
                                 stack.push(nc);
                         }
-                        // check west
-                        if (ccc.x > 0 && (this.field[ccc.x - 1][ccc.y] && this.field[ccc.x - 1][ccc.y].color == fval)) {
+                        if (ccc.x > 0 && this.CheckColor(ccc.x - 1, ccc.y, stackColor)) {
                             var nc = { x: ccc.x - 1, y: ccc.y };
-                            if (colorspace.filter(function (csc, idx) { return csc.x == nc.x && csc.y == nc.y; }, this).length == 0)
+                            if (this.FilterFieldCoord(nc, colorspace))
                                 stack.push(nc);
                         }
-                        // check east
-                        if ((ccc.x < this.TILE_COLUMNS - 1) && (this.field[ccc.x + 1][ccc.y] && this.field[ccc.x + 1][ccc.y].color == fval)) {
+                        if ((ccc.x < this.TILE_COLUMNS - 1) && this.CheckColor(ccc.x + 1, ccc.y, stackColor)) {
                             var nc = { x: ccc.x + 1, y: ccc.y };
-                            if (colorspace.filter(function (csc, idx) { return csc.x == nc.x && csc.y == nc.y; }, this).length == 0)
+                            if (this.FilterFieldCoord(nc, colorspace))
                                 stack.push(nc);
                         }
                     }
                     if (colorspace.length < 3)
                         continue;
-                    colorspace.forEach(function (ccc) {
-                        var fval = _this.field[ccc.x][ccc.y];
-                        fval.color = -1;
-                        var spr = _this.GetSprite(fval.key);
-                        _this.TweenSpriteAlpha(spr, null, _this.RemoveEmptySpaces);
-                        spr.destroy();
-                    }, this);
+                    if (colorspace.length >= 6) {
+                        var arr = this.CreateArray(colorspace.length - 5, 2);
+                        this.bonuses = this.bonuses.concat(arr);
+                    }
+                    else if (colorspace.length > 3) {
+                        this.bonuses.push(colorspace.length - 4);
+                    }
+                    var pt = this.RemoveBlocks(colorspace);
                     this.sfxPistol.play();
-                    localPoints += colorspace.length;
+                    localPoints += pt;
                 }
             }
             if (localPoints == 0) {
@@ -237,6 +230,31 @@ var GameCurling;
                 this.points += localPoints;
                 this.textValue.text = this.points.toString();
             }
+        };
+        SimpleGame.prototype.RemoveBlocks = function (cs) {
+            var _this = this;
+            var _loop_1 = function() {
+                var actionBlocks = [];
+                cs.forEach(function (ccc, idx) {
+                    var fval = _this.field[ccc.x][ccc.y];
+                    if (fval && fval.color >= 0) {
+                        _this.GetActionBlocks(ccc, cs, actionBlocks);
+                        fval.color = -1;
+                        var spr = _this.GetSprite(fval.key);
+                        _this.TweenSpriteAlpha(spr, null, _this.RemoveEmptySpaces);
+                        spr.destroy();
+                    }
+                }, this_1);
+                if (actionBlocks.length == 0)
+                    return "break";
+                cs = cs.concat(actionBlocks);
+            };
+            var this_1 = this;
+            while (1) {
+                var state_1 = _loop_1();
+                if (state_1 === "break") break;
+            }
+            return cs.length;
         };
         SimpleGame.prototype.TweenSpritePosition = function (spr, newX, newY, onStartCB, onCompleteCB) {
             var emptyAnimation = spr.position.x == newX && spr.position.y == newY;
@@ -272,12 +290,116 @@ var GameCurling;
             return spr;
         };
         SimpleGame.prototype.FinishUpdate = function () {
-            // update max height
             for (var c = 0; c < this.TILE_COLUMNS; c++) {
                 this.maxRow = Math.max(this.field[c].length, this.maxRow);
             }
             this.lockInput = false;
             this.spawned = false;
+        };
+        SimpleGame.prototype.ShuffleArray = function (a) {
+            for (var i = a.length; i; i--) {
+                var j = Math.floor(Math.random() * i);
+                _a = [a[j], a[i - 1]], a[i - 1] = _a[0], a[j] = _a[1];
+            }
+            var _a;
+        };
+        SimpleGame.prototype.GenerateTopBlocks = function () {
+            var _this = this;
+            this.row = [];
+            for (var i = 0; i < this.bonuses.length && i < this.TILE_COLUMNS; i++) {
+                this.row.push(this.game.add.sprite(0, 0, "s" + this.bonuses[i]));
+            }
+            for (var s = this.bonuses.length; s < this.TILE_COLUMNS; s++) {
+                this.row.push(this.game.add.sprite(0, 0, "b" + this.game.rnd.between(0, this.TILE_COLORS - 1)));
+            }
+            this.ShuffleArray(this.row);
+            this.row.forEach(function (spr, idx) {
+                spr.position.set(_this.OFFSET_FIELD + _this.TILE_SPACE + idx * (_this.TILE_SPACE + _this.TILE_SIZE), -(_this.TILE_SPACE + _this.TILE_SIZE));
+                _this.TweenSpritePosition(spr, spr.position.x, _this.TILE_SPACE);
+            }, this);
+            this.bonuses = [];
+        };
+        SimpleGame.prototype.ParseColorFromSprite = function (spr) {
+            var offset = 0;
+            if (spr.key[0] == 's') {
+                offset = this.TILE_COLORS;
+            }
+            return parseInt(spr.key[1]) + offset;
+        };
+        SimpleGame.prototype.CheckColor = function (x, y, c) {
+            if (!this.field[x][y])
+                return false;
+            return (this.field[x][y].color == c || this.field[x][y].color >= this.TILE_COLORS);
+        };
+        SimpleGame.prototype.CreateArray = function (len, val) {
+            var arr = [];
+            while (len--)
+                arr.push(val);
+            return arr;
+        };
+        SimpleGame.prototype.GetActionBlocks = function (c, cs, ab) {
+            var fval = this.field[c.x][c.y];
+            if (fval.color < this.TILE_COLORS)
+                return;
+            switch (fval.color) {
+                case 6: {
+                    return;
+                }
+                case 7: {
+                    {
+                        var nc = { x: c.x, y: Math.min(this.TILE_ROWS - 1, c.y + 1) };
+                        if (this.FilterFieldCoord(nc, cs) && this.FilterFieldCoord(nc, ab))
+                            ab.push(nc);
+                    }
+                    {
+                        var nec = { x: Math.min(this.TILE_COLUMNS - 1, c.x + 1), y: Math.min(this.TILE_ROWS - 1, c.y + 1) };
+                        if (this.FilterFieldCoord(nec, cs) && this.FilterFieldCoord(nec, ab))
+                            ab.push(nec);
+                    }
+                    {
+                        var ec = { x: Math.min(this.TILE_COLUMNS - 1, c.x + 1), y: c.y };
+                        if (this.FilterFieldCoord(ec, cs) && this.FilterFieldCoord(ec, ab))
+                            ab.push(ec);
+                    }
+                    {
+                        var sec = { x: Math.min(this.TILE_COLUMNS - 1, c.x + 1), y: Math.max(0, c.y - 1) };
+                        if (this.FilterFieldCoord(sec, cs) && this.FilterFieldCoord(sec, ab))
+                            ab.push(sec);
+                    }
+                    {
+                        var sc = { x: c.x, y: Math.max(0, c.y - 1) };
+                        if (this.FilterFieldCoord(sc, cs) && this.FilterFieldCoord(sc, ab))
+                            ab.push(sc);
+                    }
+                    {
+                        var swc = { x: Math.max(0, c.x - 1), y: Math.max(0, c.y - 1) };
+                        if (this.FilterFieldCoord(swc, cs) && this.FilterFieldCoord(swc, ab))
+                            ab.push(swc);
+                    }
+                    {
+                        var wc = { x: Math.max(0, c.x - 1), y: c.y };
+                        if (this.FilterFieldCoord(wc, cs) && this.FilterFieldCoord(wc, ab))
+                            ab.push(wc);
+                    }
+                    {
+                        var nwc = { x: Math.max(0, c.x - 1), y: Math.min(this.TILE_ROWS - 1, c.y + 1) };
+                        if (this.FilterFieldCoord(nwc, cs) && this.FilterFieldCoord(nwc, ab))
+                            ab.push(nwc);
+                    }
+                    break;
+                }
+                case 8: {
+                    for (var i = 0; i < this.TILE_COLUMNS; i++) {
+                        var newc = { x: i, y: c.y };
+                        if (this.FilterFieldCoord(newc, cs) && this.FilterFieldCoord(newc, ab))
+                            ab.push(newc);
+                    }
+                    break;
+                }
+            }
+        };
+        SimpleGame.prototype.FilterFieldCoord = function (c, arr) {
+            return (arr.filter(function (csc, idx) { return csc.x == c.x && csc.y == c.y; }, this).length == 0);
         };
         SimpleGame.prototype.preload = function () {
             this.game.load.image('b0', 'curl/res/square_green.png');
@@ -286,6 +408,10 @@ var GameCurling;
             this.game.load.image('b3', 'curl/res/square_stone.png');
             this.game.load.image('b4', 'curl/res/square_wood.png');
             this.game.load.image('b5', 'curl/res/square_yellow.png');
+            this.TILE_COLORS = 6;
+            this.game.load.image('s0', 'curl/res/square_any.png');
+            this.game.load.image('s1', 'curl/res/bomb.png');
+            this.game.load.image('s2', 'curl/res/line.png');
             this.game.load.image('field', 'curl/res/cfield.png');
             this.game.load.audio("sfx_battery", "curl/res/sfx/battery.mp3");
             this.game.load.audio("sfx_numkey", "curl/res/sfx/numkey.mp3");
@@ -294,7 +420,6 @@ var GameCurling;
             this.game.load.audio("sfx_pistol", "curl/res/sfx/pistol.mp3");
         };
         SimpleGame.prototype.create = function () {
-            // constants
             this.SCREEN_WIDTH = 600;
             this.SCREEN_HEIGHT = 800;
             this.TILE_ROWS = 11;
@@ -302,13 +427,13 @@ var GameCurling;
             this.TILE_SIZE = 64;
             this.TILE_SPACE = 5;
             this.OFFSET_FIELD = 91;
-            // game variables
             this.game.add.sprite(0, 0, 'field');
-            this.spawned = false; // initial state
+            this.spawned = false;
             this.sprtId = 1;
             this.points = 0;
             this.field = [];
             this.fieldSprites = [];
+            this.bonuses = [];
             this.cursors = this.game.input.keyboard.createCursorKeys();
             this.cursors.down.onDown.add(SimpleGame.prototype.DropBlocks, this);
             this.cursors.left.onDown.add(SimpleGame.prototype.ShiftRowLeft, this);
@@ -330,19 +455,11 @@ var GameCurling;
         SimpleGame.prototype.update = function () {
             if (this.maxRow >= this.TILE_ROWS) {
                 this.sfxCells.play();
-                // game over
-                // play animation (remove all blocks in some way)
                 this.game.state.start("EndGameState", true, false, this.points);
                 return;
             }
-            // spawn
             if (!this.spawned) {
-                this.row = [];
-                for (var s = 0; s < this.TILE_COLUMNS; s++) {
-                    var spr = this.game.add.sprite(this.OFFSET_FIELD + this.TILE_SPACE + s * (this.TILE_SPACE + this.TILE_SIZE), -(this.TILE_SPACE + this.TILE_SIZE), "b" + this.game.rnd.between(0, 5));
-                    this.row.push(spr);
-                    this.TweenSpritePosition(spr, spr.position.x, this.TILE_SPACE);
-                }
+                this.GenerateTopBlocks();
                 this.spawned = true;
             }
             this.game.input.reset();
@@ -359,25 +476,16 @@ var GameCurling;
             this.game.state.add("EndGameState", EndGameScreenState, false);
             this.game.state.start("TitleScreenState", true, true);
         }
-        // This function is called when a full screen request comes in
         CurlingGame.prototype.onGoFullScreen = function () {
-            // tell Phaser how you want it to handle scaling when you go full screen
             this.game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
-            // and this causes it to actually do it
             this.game.scale.refresh();
         };
         CurlingGame.prototype.goFullScreen = function () {
         };
         CurlingGame.prototype.create = function () {
             var _this = this;
-            // Set background to white to make effect clearer
             this.game.stage.backgroundColor = 0xffffff;
-            // Add a function that will get called when the game goes fullscreen
             this.game.scale.onFullScreenInit.add(CurlingGame.prototype.onGoFullScreen, this);
-            // Now add a function that will get called when user taps screen.
-            // Function declared inline using arrow (=>) function expression
-            // Simply calls startFullScreen().  True specifies you want anti aliasing.
-            // Unfortunately you can only make full screen requests in desktop browsers in event handlers
             this.game.input.onTap.add(function () { _this.game.scale.startFullScreen(true); }, this);
         };
         return CurlingGame;
@@ -387,4 +495,3 @@ var GameCurling;
 window.onload = function () {
     var game = new GameCurling.CurlingGame();
 };
-//# sourceMappingURL=app.js.map
