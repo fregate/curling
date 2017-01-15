@@ -81,6 +81,54 @@ var Utils;
     }());
     Utils.ScreenUtils = ScreenUtils;
 })(Utils || (Utils = {}));
+var PhaserSwipe;
+(function (PhaserSwipe) {
+    var Swipe = (function () {
+        function Swipe(g) {
+            this.game = g;
+            this.swipeDown = new Phaser.Signal;
+            this.swipeUp = new Phaser.Signal;
+            this.swipeLeft = new Phaser.Signal;
+            this.swipeRight = new Phaser.Signal;
+            this.swipeAny = new Phaser.Signal;
+            this.game.input.onDown.addOnce(this.BeginSwipe, this);
+        }
+        Swipe.prototype.TestBegin = function (e) {
+            console.log("Swipe.TestBegin", e);
+        };
+        Swipe.prototype.TestEnd = function (e) {
+            console.log("SwipeTestEnd", e);
+        };
+        Swipe.prototype.BeginSwipe = function (e) {
+            console.log("BeginSwipe", e);
+            this.game.input.onUp.addOnce(this.EndSwipe, this);
+        };
+        Swipe.prototype.EndSwipe = function (e) {
+            this.game.input.onDown.addOnce(this.BeginSwipe, this);
+            var swipeTime = e.timeUp - e.timeDown;
+            var swipeDistance = Phaser.Point.subtract(e.position, e.positionDown);
+            var swipeMagnitude = swipeDistance.getMagnitude();
+            var swipeNormal = Phaser.Point.normalize(swipeDistance);
+            if (swipeMagnitude > 20 && swipeTime < 1000 && (Math.abs(swipeNormal.x) > 0.8 || Math.abs(swipeNormal.y) > 0.8)) {
+                if (swipeNormal.x > 0.8) {
+                    this.swipeRight.dispatch();
+                }
+                if (swipeNormal.x < -0.8) {
+                    this.swipeLeft.dispatch();
+                }
+                if (swipeNormal.y > 0.8) {
+                    this.swipeDown.dispatch();
+                }
+                if (swipeNormal.y < -0.8) {
+                    this.swipeUp.dispatch();
+                }
+            }
+            this.swipeAny.dispatch(swipeDistance, swipeTime);
+        };
+        return Swipe;
+    }());
+    PhaserSwipe.Swipe = Swipe;
+})(PhaserSwipe || (PhaserSwipe = {}));
 var GameCurling;
 (function (GameCurling) {
     var ANIMATION_WAITER = (function () {
@@ -177,22 +225,11 @@ var GameCurling;
             this.lockInput = false;
             this.aw = new ANIMATION_WAITER;
         }
-        SimpleGame.prototype.HandleTouchMouse = function (pointer) {
+        SimpleGame.prototype.ShiftRowLeft = function () {
+            var _this = this;
             if (this.lockInput) {
                 return;
             }
-            if (this.bottomRect.contains(pointer.x, pointer.y)) {
-                this.DropBlocks();
-            }
-            if (this.topLeftRect.contains(pointer.x, pointer.y)) {
-                this.ShiftRowLeft();
-            }
-            if (this.topRighRect.contains(pointer.x, pointer.y)) {
-                this.ShiftRowRight();
-            }
-        };
-        SimpleGame.prototype.ShiftRowLeft = function () {
-            var _this = this;
             this.sfxWall.play();
             var shifted = this.row.shift();
             this.row.push(shifted);
@@ -202,6 +239,9 @@ var GameCurling;
         };
         SimpleGame.prototype.ShiftRowRight = function () {
             var _this = this;
+            if (this.lockInput) {
+                return;
+            }
             this.sfxWall.play();
             var popped = this.row.pop();
             this.row.unshift(popped);
@@ -211,6 +251,9 @@ var GameCurling;
         };
         SimpleGame.prototype.DropBlocks = function () {
             var _this = this;
+            if (this.lockInput) {
+                return;
+            }
             this.sfxBattery.play();
             this.row.forEach(function (spr, idx) {
                 _this.field[idx] ? _this.field[idx] : _this.field[idx] = [];
@@ -502,10 +545,10 @@ var GameCurling;
             this.cursors.down.onDown.add(SimpleGame.prototype.DropBlocks, this);
             this.cursors.left.onDown.add(SimpleGame.prototype.ShiftRowLeft, this);
             this.cursors.right.onDown.add(SimpleGame.prototype.ShiftRowRight, this);
-            this.topLeftRect = new Phaser.Rectangle(0, 0, this.game.width / 2, this.game.height / 2);
-            this.topRighRect = new Phaser.Rectangle(this.game.width / 2 + 1, 0, this.game.width, this.game.height / 2);
-            this.bottomRect = new Phaser.Rectangle(0, this.game.height / 2 + 1, this.game.width, this.game.height);
-            this.game.input.onDown.add(SimpleGame.prototype.HandleTouchMouse, this);
+            this.swipe = new PhaserSwipe.Swipe(this.game);
+            this.swipe.swipeDown.add(SimpleGame.prototype.DropBlocks, this);
+            this.swipe.swipeLeft.add(SimpleGame.prototype.ShiftRowLeft, this);
+            this.swipe.swipeRight.add(SimpleGame.prototype.ShiftRowRight, this);
             this.maxRow = 0;
             var style = { font: "bold 65px monospace", fill: "#ff0000", align: "right" };
             this.textValue = this.game.add.text(0, 0, "0", style);
@@ -526,7 +569,6 @@ var GameCurling;
                 this.GenerateTopBlocks();
                 this.spawned = true;
             }
-            this.game.input.reset();
         };
         return SimpleGame;
     }(Phaser.State));
@@ -535,12 +577,13 @@ var GameCurling;
             this.SCREEN_WIDTH = 600;
             this.SCREEN_HEIGHT = 800;
             var screenDims = Utils.ScreenUtils.calculateScreenMetrics(this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Utils.Orientation.PORTRAIT);
-            this.game = new Phaser.Game(this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Phaser.AUTO, 'gamefield', { create: this.create, init: this.init });
+            this.game = new Phaser.Game(this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Phaser.AUTO, '', { create: this.create, init: this.init });
             this.game.state.add("GameRunningState", SimpleGame, false);
             this.game.state.add("TitleScreenState", TitleScreenState, false);
             this.game.state.add("EndGameState", EndGameScreenState, false);
         }
         CurlingGame.prototype.init = function () {
+            this.game.input.maxPointers = 2;
             if (this.game.device.desktop) {
                 this.game.scale.scaleMode = Phaser.ScaleManager.NO_SCALE;
                 this.game.scale.pageAlignHorizontally = true;
