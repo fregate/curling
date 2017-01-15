@@ -3,16 +3,86 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+var Utils;
+(function (Utils) {
+    var ScreenMetrics = (function () {
+        function ScreenMetrics() {
+        }
+        return ScreenMetrics;
+    }());
+    Utils.ScreenMetrics = ScreenMetrics;
+    (function (Orientation) {
+        Orientation[Orientation["PORTRAIT"] = 0] = "PORTRAIT";
+        Orientation[Orientation["LANDSCAPE"] = 1] = "LANDSCAPE";
+    })(Utils.Orientation || (Utils.Orientation = {}));
+    var Orientation = Utils.Orientation;
+    ;
+    var ScreenUtils = (function () {
+        function ScreenUtils() {
+        }
+        ScreenUtils.calculateScreenMetrics = function (aDefaultWidth, aDefaultHeight, aOrientation, aMaxGameWidth, aMaxGameHeight) {
+            if (aOrientation === void 0) { aOrientation = Orientation.LANDSCAPE; }
+            var windowWidth = window.innerWidth;
+            var windowHeight = window.innerHeight;
+            if ((windowWidth < windowHeight && aOrientation === Orientation.LANDSCAPE) ||
+                (windowHeight < windowWidth && aOrientation === Orientation.PORTRAIT)) {
+                var tmp = windowWidth;
+                windowWidth = windowHeight;
+                windowHeight = tmp;
+            }
+            if (typeof aMaxGameWidth === "undefined" || typeof aMaxGameHeight === "undefined") {
+                if (aOrientation === Orientation.LANDSCAPE) {
+                    aMaxGameWidth = Math.round(aDefaultWidth * 1420 / 1280);
+                    aMaxGameHeight = Math.round(aDefaultHeight * 960 / 800);
+                }
+                else {
+                    aMaxGameWidth = Math.round(aDefaultWidth * 960 / 800);
+                    aMaxGameHeight = Math.round(aDefaultHeight * 1420 / 1280);
+                }
+            }
+            var defaultAspect = (aOrientation === Orientation.LANDSCAPE) ? 1280 / 800 : 800 / 1280;
+            var windowAspect = windowWidth / windowHeight;
+            var offsetX = 0;
+            var offsetY = 0;
+            var gameWidth = 0;
+            var gameHeight = 0;
+            if (windowAspect > defaultAspect) {
+                gameHeight = aDefaultHeight;
+                gameWidth = Math.ceil((gameHeight * windowAspect) / 2.0) * 2;
+                gameWidth = Math.min(gameWidth, aMaxGameWidth);
+                offsetX = (gameWidth - aDefaultWidth) / 2;
+                offsetY = 0;
+            }
+            else {
+                gameWidth = aDefaultWidth;
+                gameHeight = Math.ceil((gameWidth / windowAspect) / 2.0) * 2;
+                gameHeight = Math.min(gameHeight, aMaxGameHeight);
+                offsetX = 0;
+                offsetY = (gameHeight - aDefaultHeight) / 2;
+            }
+            var scaleX = windowWidth / gameWidth;
+            var scaleY = windowHeight / gameHeight;
+            this.screenMetrics = new ScreenMetrics();
+            this.screenMetrics.windowWidth = windowWidth;
+            this.screenMetrics.windowHeight = windowHeight;
+            this.screenMetrics.defaultGameWidth = aDefaultWidth;
+            this.screenMetrics.defaultGameHeight = aDefaultHeight;
+            this.screenMetrics.maxGameWidth = aMaxGameWidth;
+            this.screenMetrics.maxGameHeight = aMaxGameHeight;
+            this.screenMetrics.gameWidth = gameWidth;
+            this.screenMetrics.gameHeight = gameHeight;
+            this.screenMetrics.scaleX = scaleX;
+            this.screenMetrics.scaleY = scaleY;
+            this.screenMetrics.offsetX = offsetX;
+            this.screenMetrics.offsetY = offsetY;
+            return this.screenMetrics;
+        };
+        return ScreenUtils;
+    }());
+    Utils.ScreenUtils = ScreenUtils;
+})(Utils || (Utils = {}));
 var GameCurling;
 (function (GameCurling) {
-    var SETTINGS = (function () {
-        function SETTINGS() {
-            this.SCREEN_WIDTH = 600;
-            this.SCREEN_HEIGHT = 800;
-        }
-        return SETTINGS;
-    }());
-    ;
     var ANIMATION_WAITER = (function () {
         function ANIMATION_WAITER() {
             this.refs = 0;
@@ -39,8 +109,8 @@ var GameCurling;
             _super.call(this);
         }
         TitleScreenState.prototype.preload = function () {
-            this.game.load.image("title", "curl/res/title.png");
-            this.game.load.audio("click", "curl/res/sfx/battery.mp3");
+            this.game.load.image("title", "res/title.png");
+            this.game.load.audio("click", "res/sfx/battery.mp3");
         };
         TitleScreenState.prototype.create = function () {
             this.game.add.sprite(0, 0, "title");
@@ -66,9 +136,9 @@ var GameCurling;
             this.points = pts;
         };
         EndGameScreenState.prototype.preload = function () {
-            this.game.load.image("bg", "curl/res/empty.png");
-            this.game.load.audio("click", "curl/res/sfx/battery.mp3");
-            this.game.load.text("invite", "curl/res/invite.txt");
+            this.game.load.image("bg", "res/empty.png");
+            this.game.load.audio("click", "res/sfx/battery.mp3");
+            this.game.load.text("invite", "res/invite.txt");
         };
         EndGameScreenState.prototype.create = function () {
             this.game.add.sprite(0, 0, "bg");
@@ -98,8 +168,6 @@ var GameCurling;
         __extends(SimpleGame, _super);
         function SimpleGame() {
             _super.call(this);
-            this.SCREEN_WIDTH = 600;
-            this.SCREEN_HEIGHT = 800;
             this.TILE_ROWS = 11;
             this.TILE_COLUMNS = 6;
             this.TILE_SIZE = 64;
@@ -149,7 +217,7 @@ var GameCurling;
                 var fcy = _this.field[idx].filter(function (num) { return num.color >= 0; }).length;
                 _this.field[idx][fcy] = { color: _this.ParseColorFromSprite(spr), key: _this.sprtId };
                 spr.anchor.set(0, 1);
-                _this.TweenSpritePosition(spr, spr.position.x, _this.SCREEN_HEIGHT - _this.TILE_SPACE - (fcy * (_this.TILE_SPACE + _this.TILE_SIZE)), null, _this.RemoveEmptySpaces);
+                _this.TweenSpritePosition(spr, spr.position.x, _this.game.height - _this.TILE_SPACE - (fcy * (_this.TILE_SPACE + _this.TILE_SIZE)), null, _this.RemoveEmptySpaces);
                 _this.fieldSprites.push({ key: _this.sprtId++, sprt: spr });
             }, this);
             this.row = [];
@@ -161,8 +229,8 @@ var GameCurling;
                 _this.field[fldidx] = line;
                 line.forEach(function (val, idx) {
                     var spr = _this.fieldSprites.filter(function (s) { return s.key == val.key; }, _this)[0].sprt;
-                    if (spr.position.y != _this.SCREEN_HEIGHT - _this.TILE_SPACE - (idx * (_this.TILE_SPACE + _this.TILE_SIZE))) {
-                        _this.TweenSpritePosition(spr, spr.position.x, _this.SCREEN_HEIGHT - _this.TILE_SPACE - (idx * (_this.TILE_SPACE + _this.TILE_SIZE)), null, _this.CheckField);
+                    if (spr.position.y != _this.game.height - _this.TILE_SPACE - (idx * (_this.TILE_SPACE + _this.TILE_SIZE))) {
+                        _this.TweenSpritePosition(spr, spr.position.x, _this.game.height - _this.TILE_SPACE - (idx * (_this.TILE_SPACE + _this.TILE_SIZE)), null, _this.CheckField);
                     }
                 }, _this);
             }, this);
@@ -400,26 +468,24 @@ var GameCurling;
             return (arr.filter(function (csc, idx) { return csc.x == c.x && csc.y == c.y; }, this).length == 0);
         };
         SimpleGame.prototype.preload = function () {
-            this.game.load.image('b0', 'curl/res/square_green.png');
-            this.game.load.image('b1', 'curl/res/square_blue.png');
-            this.game.load.image('b2', 'curl/res/square_red.png');
-            this.game.load.image('b3', 'curl/res/square_stone.png');
-            this.game.load.image('b4', 'curl/res/square_wood.png');
-            this.game.load.image('b5', 'curl/res/square_yellow.png');
+            this.game.load.image('b0', 'res/square_green.png');
+            this.game.load.image('b1', 'res/square_blue.png');
+            this.game.load.image('b2', 'res/square_red.png');
+            this.game.load.image('b3', 'res/square_stone.png');
+            this.game.load.image('b4', 'res/square_wood.png');
+            this.game.load.image('b5', 'res/square_yellow.png');
             this.TILE_COLORS = 6;
-            this.game.load.image('s0', 'curl/res/square_any.png');
-            this.game.load.image('s1', 'curl/res/bomb.png');
-            this.game.load.image('s2', 'curl/res/line.png');
-            this.game.load.image('field', 'curl/res/cfield.png');
-            this.game.load.audio("sfx_battery", "curl/res/sfx/battery.mp3");
-            this.game.load.audio("sfx_numkey", "curl/res/sfx/numkey.mp3");
-            this.game.load.audio("sfx_wall", "curl/res/sfx/wall.mp3");
-            this.game.load.audio("sfx_cells", "curl/res/sfx/need_cells.mp3");
-            this.game.load.audio("sfx_pistol", "curl/res/sfx/pistol.mp3");
+            this.game.load.image('s0', 'res/square_any.png');
+            this.game.load.image('s1', 'res/bomb.png');
+            this.game.load.image('s2', 'res/line.png');
+            this.game.load.image('field', 'res/cfield.png');
+            this.game.load.audio("sfx_battery", "res/sfx/battery.mp3");
+            this.game.load.audio("sfx_numkey", "res/sfx/numkey.mp3");
+            this.game.load.audio("sfx_wall", "res/sfx/wall.mp3");
+            this.game.load.audio("sfx_cells", "res/sfx/need_cells.mp3");
+            this.game.load.audio("sfx_pistol", "res/sfx/pistol.mp3");
         };
         SimpleGame.prototype.create = function () {
-            this.SCREEN_WIDTH = 600;
-            this.SCREEN_HEIGHT = 800;
             this.TILE_ROWS = 11;
             this.TILE_COLUMNS = 6;
             this.TILE_SIZE = 64;
@@ -468,23 +534,42 @@ var GameCurling;
         function CurlingGame() {
             this.SCREEN_WIDTH = 600;
             this.SCREEN_HEIGHT = 800;
-            this.game = new Phaser.Game(this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Phaser.AUTO, 'gamefield', { create: this.create });
+            var screenDims = Utils.ScreenUtils.calculateScreenMetrics(this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Utils.Orientation.PORTRAIT);
+            this.game = new Phaser.Game(this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Phaser.AUTO, 'gamefield', { create: this.create, init: this.init });
             this.game.state.add("GameRunningState", SimpleGame, false);
             this.game.state.add("TitleScreenState", TitleScreenState, false);
             this.game.state.add("EndGameState", EndGameScreenState, false);
-            this.game.state.start("TitleScreenState", true, true);
         }
-        CurlingGame.prototype.onGoFullScreen = function () {
-            this.game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
-            this.game.scale.refresh();
+        CurlingGame.prototype.init = function () {
+            if (this.game.device.desktop) {
+                this.game.scale.scaleMode = Phaser.ScaleManager.NO_SCALE;
+                this.game.scale.pageAlignHorizontally = true;
+            }
+            else {
+                this.game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+            }
         };
-        CurlingGame.prototype.goFullScreen = function () {
+        CurlingGame.prototype.init2 = function () {
+            this.game.input.maxPointers = 1;
+            this.game.stage.disableVisibilityChange = false;
+            var screenDims = Utils.ScreenUtils.screenMetrics;
+            if (this.game.device.desktop) {
+                console.log("DESKTOP");
+                this.game.scale.scaleMode = Phaser.ScaleManager.NO_SCALE;
+                this.game.scale.pageAlignHorizontally = true;
+            }
+            else {
+                console.log("MOBILE");
+                this.game.scale.scaleMode = Phaser.ScaleManager.USER_SCALE;
+                this.game.scale.setUserScale(screenDims.scaleX, screenDims.scaleY);
+                this.game.scale.pageAlignHorizontally = true;
+                this.game.scale.pageAlignVertically = true;
+                this.game.scale.forceOrientation(true, false);
+            }
+            console.log(screenDims);
         };
         CurlingGame.prototype.create = function () {
-            var _this = this;
-            this.game.stage.backgroundColor = 0xffffff;
-            this.game.scale.onFullScreenInit.add(CurlingGame.prototype.onGoFullScreen, this);
-            this.game.input.onTap.add(function () { _this.game.scale.startFullScreen(true); }, this);
+            this.game.state.start("TitleScreenState", true, true);
         };
         return CurlingGame;
     }());
