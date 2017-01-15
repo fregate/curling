@@ -505,10 +505,7 @@ var GameCurling;
             this.topLeftRect = new Phaser.Rectangle(0, 0, this.game.width / 2, this.game.height / 2);
             this.topRighRect = new Phaser.Rectangle(this.game.width / 2 + 1, 0, this.game.width, this.game.height / 2);
             this.bottomRect = new Phaser.Rectangle(0, this.game.height / 2 + 1, this.game.width, this.game.height);
-//            this.game.input.onDown.add(SimpleGame.prototype.HandleTouchMouse, this);
-            this.game.input.onDown.add(function () { _this.game.debug.text("onDown", 10, 10); }, this);
-            this.game.input.onUp.add(function () { _this.game.debug.text("onUp", 10, 30); }, this);
-
+            this.game.input.onDown.add(SimpleGame.prototype.HandleTouchMouse, this);
             this.maxRow = 0;
             var style = { font: "bold 65px monospace", fill: "#ff0000", align: "right" };
             this.textValue = this.game.add.text(0, 0, "0", style);
