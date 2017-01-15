@@ -95,6 +95,82 @@
     }
 }
 
+module PhaserSwipe {
+    export class Swipe {
+        private game: Phaser.Game;
+
+        swipeDown: Phaser.Signal;
+        swipeUp: Phaser.Signal;
+        swipeLeft: Phaser.Signal;
+        swipeRight: Phaser.Signal;
+        swipeAny: Phaser.Signal;
+
+        // handlers
+        constructor(g: Phaser.Game) {
+            this.game = g;
+            this.swipeDown = new Phaser.Signal;
+            this.swipeUp = new Phaser.Signal;
+            this.swipeLeft = new Phaser.Signal;
+            this.swipeRight = new Phaser.Signal;
+            this.swipeAny = new Phaser.Signal;
+
+            this.game.input.onDown.addOnce(this.BeginSwipe, this);
+        }
+
+        TestBegin(e: Phaser.Pointer) {
+            console.log("Swipe.TestBegin", e);
+        }
+        TestEnd(e: Phaser.Pointer) {
+            console.log("SwipeTestEnd", e);
+        }
+
+        BeginSwipe(e: Phaser.Pointer) {
+            console.log("BeginSwipe", e);
+            this.game.input.onUp.addOnce(this.EndSwipe, this);
+        }
+
+        EndSwipe(e: Phaser.Pointer) {
+            this.game.input.onDown.addOnce(this.BeginSwipe, this);
+
+            // swipeTime is the time passed from the beginning of the swipe until the completion of the swipe
+            var swipeTime = e.timeUp - e.timeDown;
+
+            // you get swipeDistace by subtracting the starting swipe position from the final swipe position.
+            // you will get a vector with the actual amount of pixels the player moved
+            var swipeDistance = Phaser.Point.subtract(e.position, e.positionDown);
+
+            // the magnitude of a vector is the length of the vector itself
+            var swipeMagnitude = swipeDistance.getMagnitude();
+
+            // the normal of a vector is a vector with the same direction but with magnitude equal to 1
+            var swipeNormal = Phaser.Point.normalize(swipeDistance);
+
+            // we decide we have a swipe when:
+            // * we moved the input by at least 20 pixels (magnitude)
+            // * the movement took less than one second
+            // * the orizontal or vertical absolute value of x or y normal components are greater than 0.8,
+            //   that means the movement was mostly horizontal or vertical 
+            if (swipeMagnitude > 20 && swipeTime < 1000 && (Math.abs(swipeNormal.x) > 0.8 || Math.abs(swipeNormal.y) > 0.8)) {
+                if (swipeNormal.x > 0.8) {
+                    this.swipeRight.dispatch();
+                }
+                if (swipeNormal.x < -0.8) {
+                    this.swipeLeft.dispatch();
+                }
+                if (swipeNormal.y > 0.8) {
+                    this.swipeDown.dispatch();
+                }
+                if (swipeNormal.y < -0.8) {
+                    this.swipeUp.dispatch();
+                }
+            }
+
+            // any swipe
+            this.swipeAny.dispatch(swipeDistance, swipeTime);
+        }
+    }
+}
+
 module GameCurling {
 
     class ANIMATION_WAITER {
@@ -192,15 +268,15 @@ module GameCurling {
             this.game.add.sprite(0, 0, "bg");
             this.sfx = this.game.add.audio("click");
 
-            let style = { font: "bold 65px Courier", fill: "#fff", boundsAlignH: "center", boundsAlignV: "middle" };
+            let style = { font: "bold 65px monospace", fill: "#fff", boundsAlignH: "center", boundsAlignV: "middle" };
             this.textGameOver = this.game.add.text(0, 0, "ВОТ И ВСЕ", style);
             this.textGameOver.setTextBounds(0, 150, this.game.width, 100);
 
-            style.font = "bold 30px Courier";
+            style.font = "bold 30px monospace";
             this.textRecord = this.game.add.text(0, 0, "Камней сломалось: " + this.points, style);
             this.textRecord.setTextBounds(0, 250, this.game.width, 50);
 
-            let styleoverall = { font: "20px Courier", fill: "#fff", align: "left", wordWrap: true, wordWrapWidth: this.game.width - 30 };
+            let styleoverall = { font: "20px monospace", fill: "#fff", align: "left", wordWrap: true, wordWrapWidth: this.game.width - 30 };
             let txt = this.game.cache.getText('invite');
             this.textRecord = this.game.add.text(30, 350, txt, styleoverall);
 
@@ -251,20 +327,19 @@ module GameCurling {
         //game: Phaser.Game;
         row: Phaser.Sprite[];
         spawned: boolean;
-        cursors: Phaser.CursorKeys;
-        topLeftRect: Phaser.Rectangle;
-        topRighRect: Phaser.Rectangle;
-        bottomRect: Phaser.Rectangle;
-        textValue: Phaser.Text;
 
+        cursors: Phaser.CursorKeys;
+//        topLeftRect: Phaser.Rectangle;
+//        topRighRect: Phaser.Rectangle;
+//        bottomRect: Phaser.Rectangle;
+        swipe: PhaserSwipe.Swipe;
+
+        textValue: Phaser.Text;
         points: number;
 
         // handle input function
+/*
         HandleTouchMouse(pointer) {
-            if (this.lockInput) {
-                return;
-            }
-
             if (this.bottomRect.contains(pointer.x, pointer.y)) {
 //                this.DropRowDown();
                 this.DropBlocks();
@@ -278,8 +353,11 @@ module GameCurling {
                 this.ShiftRowRight();
             }
         }
-
+*/
         ShiftRowLeft() {
+            if (this.lockInput) {
+                return;
+            }
             this.sfxWall.play();
             let shifted = this.row.shift();
             this.row.push(shifted);
@@ -291,6 +369,9 @@ module GameCurling {
         }
 
         ShiftRowRight() {
+            if (this.lockInput) {
+                return;
+            }
             this.sfxWall.play();
 
             let popped = this.row.pop();
@@ -303,6 +384,9 @@ module GameCurling {
         }
 
         DropBlocks() {
+            if (this.lockInput) {
+                return;
+            }
             this.sfxBattery.play();
 
             this.row.forEach((spr, idx) => {
@@ -678,15 +762,20 @@ module GameCurling {
             this.cursors.left.onDown.add(SimpleGame.prototype.ShiftRowLeft, this);
             this.cursors.right.onDown.add(SimpleGame.prototype.ShiftRowRight, this);
 
-            this.topLeftRect = new Phaser.Rectangle(0, 0, this.game.width / 2, this.game.height / 2);
-            this.topRighRect = new Phaser.Rectangle(this.game.width / 2 + 1, 0, this.game.width, this.game.height / 2);
-            this.bottomRect = new Phaser.Rectangle(0, this.game.height / 2 + 1, this.game.width, this.game.height);
+            this.swipe = new PhaserSwipe.Swipe(this.game);
+            this.swipe.swipeDown.add(SimpleGame.prototype.DropBlocks, this);
+            this.swipe.swipeLeft.add(SimpleGame.prototype.ShiftRowLeft, this);
+            this.swipe.swipeRight.add(SimpleGame.prototype.ShiftRowRight, this);
 
-            this.game.input.onDown.add(SimpleGame.prototype.HandleTouchMouse, this);
+//            this.topLeftRect = new Phaser.Rectangle(0, 0, this.game.width / 2, this.game.height / 2);
+//            this.topRighRect = new Phaser.Rectangle(this.game.width / 2 + 1, 0, this.game.width, this.game.height / 2);
+//            this.bottomRect = new Phaser.Rectangle(0, this.game.height / 2 + 1, this.game.width, this.game.height);
+
+//            this.game.input.onDown.add(SimpleGame.prototype.HandleTouchMouse, this);
 
             this.maxRow = 0;
 
-            let style = { font: "bold 65px Courier", fill: "#ff0000", align: "right" };
+            let style = { font: "bold 65px monospace", fill: "#ff0000", align: "right" };
             this.textValue = this.game.add.text(0, 0, "0", style);
 
             this.dummySprite = this.game.add.sprite(
@@ -716,7 +805,7 @@ module GameCurling {
                 this.spawned = true;
             }
 
-            this.game.input.reset();
+//            this.game.input.reset();
         }
     }
 
@@ -730,7 +819,7 @@ module GameCurling {
             let screenDims = Utils.ScreenUtils.calculateScreenMetrics(
                 this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Utils.Orientation.PORTRAIT);
 
-            this.game = new Phaser.Game(this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Phaser.AUTO, 'gamefield', { create: this.create, init: this.init });
+            this.game = new Phaser.Game(this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Phaser.AUTO, '', { create: this.create, init: this.init });
 
             this.game.state.add("GameRunningState", SimpleGame, false);
             this.game.state.add("TitleScreenState", TitleScreenState, false);
@@ -738,6 +827,7 @@ module GameCurling {
         }
 
         init() {
+            this.game.input.maxPointers = 2;
             if (this.game.device.desktop) {
                 this.game.scale.scaleMode = Phaser.ScaleManager.NO_SCALE;
                 this.game.scale.pageAlignHorizontally = true;
