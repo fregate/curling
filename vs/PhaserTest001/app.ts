@@ -1,9 +1,101 @@
-﻿module GameCurling {
+﻿module Utils {
+    export class ScreenMetrics {
+        windowWidth: number;
+        windowHeight: number;
 
-    class SETTINGS {
-        SCREEN_WIDTH: number = 600;
-        SCREEN_HEIGHT: number = 800;
-    };
+        defaultGameWidth: number;
+        defaultGameHeight: number;
+        maxGameWidth: number;
+        maxGameHeight: number
+
+        gameWidth: number;
+        gameHeight: number;
+        scaleX: number;
+        scaleY: number;
+        offsetX: number;
+        offsetY: number;
+    }
+
+    export enum Orientation { PORTRAIT, LANDSCAPE };
+
+    export class ScreenUtils {
+        public static screenMetrics: ScreenMetrics;
+
+        // -------------------------------------------------------------------------
+        public static calculateScreenMetrics(aDefaultWidth: number, aDefaultHeight: number,
+            aOrientation: Orientation = Orientation.LANDSCAPE,
+            aMaxGameWidth?: number, aMaxGameHeight?: number): ScreenMetrics {
+            // get dimension of window
+            let windowWidth: number = window.innerWidth;
+            let windowHeight: number = window.innerHeight;
+            // swap if window dimensions do not match orientation
+            if ((windowWidth < windowHeight && aOrientation === Orientation.LANDSCAPE) ||
+                (windowHeight < windowWidth && aOrientation === Orientation.PORTRAIT)) {
+                let tmp: number = windowWidth;
+                windowWidth = windowHeight;
+                windowHeight = tmp;
+            }
+            // calculate max game dimension. The bounds are iPad and iPhone 
+            if (typeof aMaxGameWidth === "undefined" || typeof aMaxGameHeight === "undefined") {
+                if (aOrientation === Orientation.LANDSCAPE) {
+                    aMaxGameWidth = Math.round(aDefaultWidth * 1420 / 1280);
+                    aMaxGameHeight = Math.round(aDefaultHeight * 960 / 800);
+                } else {
+                    aMaxGameWidth = Math.round(aDefaultWidth * 960 / 800);
+                    aMaxGameHeight = Math.round(aDefaultHeight * 1420 / 1280);
+                }
+            }
+            // default aspect and current window aspect
+            let defaultAspect: number = (aOrientation === Orientation.LANDSCAPE) ? 1280 / 800 : 800 / 1280;
+            let windowAspect: number = windowWidth / windowHeight;
+
+            let offsetX: number = 0;
+            let offsetY: number = 0;
+            let gameWidth: number = 0;
+            let gameHeight: number = 0;
+
+            // if (aOrientation === Orientation.LANDSCAPE) {
+            // "iPhone" landscape ... and "iPad" portrait
+            if (windowAspect > defaultAspect) {
+                gameHeight = aDefaultHeight;
+                gameWidth = Math.ceil((gameHeight * windowAspect) / 2.0) * 2;
+                gameWidth = Math.min(gameWidth, aMaxGameWidth);
+                offsetX = (gameWidth - aDefaultWidth) / 2;
+                offsetY = 0;
+            } else {    // "iPad" landscpae ... and "iPhone" portrait
+                gameWidth = aDefaultWidth;
+                gameHeight = Math.ceil((gameWidth / windowAspect) / 2.0) * 2;
+                gameHeight = Math.min(gameHeight, aMaxGameHeight);
+                offsetX = 0;
+                offsetY = (gameHeight - aDefaultHeight) / 2;
+            }
+
+            // calculate scale
+            let scaleX: number = windowWidth / gameWidth;
+            let scaleY: number = windowHeight / gameHeight;
+            // store values
+            this.screenMetrics = new ScreenMetrics();
+            this.screenMetrics.windowWidth = windowWidth;
+            this.screenMetrics.windowHeight = windowHeight;
+
+            this.screenMetrics.defaultGameWidth = aDefaultWidth;
+            this.screenMetrics.defaultGameHeight = aDefaultHeight;
+            this.screenMetrics.maxGameWidth = aMaxGameWidth;
+            this.screenMetrics.maxGameHeight = aMaxGameHeight;
+
+            this.screenMetrics.gameWidth = gameWidth;
+            this.screenMetrics.gameHeight = gameHeight;
+            this.screenMetrics.scaleX = scaleX;
+            this.screenMetrics.scaleY = scaleY;
+            this.screenMetrics.offsetX = offsetX;
+            this.screenMetrics.offsetY = offsetY;
+
+            return this.screenMetrics;
+        }
+    }
+}
+
+module GameCurling {
 
     class ANIMATION_WAITER {
         private refs: number = 0;
@@ -125,9 +217,6 @@
     };
 
     class SimpleGame extends Phaser.State {
-        private SCREEN_WIDTH: number = 600;
-        private SCREEN_HEIGHT: number = 800;
-
         private TILE_ROWS: number = 11;
         private TILE_COLUMNS: number = 6;
 
@@ -225,7 +314,7 @@
                 this.TweenSpritePosition(
                     spr,
                     spr.position.x,
-                    this.SCREEN_HEIGHT - this.TILE_SPACE - (fcy * (this.TILE_SPACE + this.TILE_SIZE)),
+                    this.game.height - this.TILE_SPACE - (fcy * (this.TILE_SPACE + this.TILE_SIZE)),
                     null,
                     this.RemoveEmptySpaces
                 );
@@ -240,11 +329,11 @@
                 this.field[fldidx] = line;
                 line.forEach((val, idx) => {
                     var spr = this.fieldSprites.filter((s) => { return s.key == val.key; }, this)[0].sprt;
-                    if (spr.position.y != this.SCREEN_HEIGHT - this.TILE_SPACE - (idx * (this.TILE_SPACE + this.TILE_SIZE))) {
+                    if (spr.position.y != this.game.height - this.TILE_SPACE - (idx * (this.TILE_SPACE + this.TILE_SIZE))) {
                         this.TweenSpritePosition(
                             spr,
                             spr.position.x,
-                            this.SCREEN_HEIGHT - this.TILE_SPACE - (idx * (this.TILE_SPACE + this.TILE_SIZE)),
+                            this.game.height - this.TILE_SPACE - (idx * (this.TILE_SPACE + this.TILE_SIZE)),
                             null,
                             this.CheckField
                         );
@@ -565,8 +654,6 @@
 
         create() {
             // constants
-            this.SCREEN_WIDTH = 600;
-            this.SCREEN_HEIGHT = 800;
             this.TILE_ROWS = 11;
             this.TILE_COLUMNS = 6;
             this.TILE_SIZE = 64;
@@ -635,45 +722,57 @@
 
     export class CurlingGame {
         game: Phaser.Game;
-        private SCREEN_WIDTH: number = 600;
-        private SCREEN_HEIGHT: number = 800;
+
+        SCREEN_WIDTH: number = 600;
+        SCREEN_HEIGHT: number = 800;
 
         constructor() {
-            this.game = new Phaser.Game(this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Phaser.AUTO, 'gamefield', { create: this.create });
+            let screenDims = Utils.ScreenUtils.calculateScreenMetrics(
+                this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Utils.Orientation.PORTRAIT);
+
+            this.game = new Phaser.Game(this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Phaser.AUTO, 'gamefield', { create: this.create, init: this.init });
 
             this.game.state.add("GameRunningState", SimpleGame, false);
             this.game.state.add("TitleScreenState", TitleScreenState, false);
             this.game.state.add("EndGameState", EndGameScreenState, false);
-
-            this.game.state.start("TitleScreenState", true, true);
         }
 
-        // This function is called when a full screen request comes in
-        onGoFullScreen() {
-            // tell Phaser how you want it to handle scaling when you go full screen
-            this.game.scale.fullScreenScaleMode = Phaser.ScaleManager.EXACT_FIT;
-            // and this causes it to actually do it
-            this.game.scale.refresh();
+        init() {
+            if (this.game.device.desktop) {
+                this.game.scale.scaleMode = Phaser.ScaleManager.NO_SCALE;
+                this.game.scale.pageAlignHorizontally = true;
+            } else {
+                this.game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+            }
         }
 
-        goFullScreen() {
+        init2() {
+            this.game.input.maxPointers = 1;
+            this.game.stage.disableVisibilityChange = false;
 
+            let screenDims = Utils.ScreenUtils.screenMetrics;
+
+            if (this.game.device.desktop) {
+                console.log("DESKTOP");
+                this.game.scale.scaleMode = Phaser.ScaleManager.NO_SCALE;
+//                this.game.scale.setUserScale(screenDims.scaleX, screenDims.scaleY);
+                  this.game.scale.pageAlignHorizontally = true;
+//                this.game.scale.pageAlignVertically = true;
+            }
+            else {
+                console.log("MOBILE");
+                this.game.scale.scaleMode = Phaser.ScaleManager.USER_SCALE;
+                this.game.scale.setUserScale(screenDims.scaleX, screenDims.scaleY);
+                this.game.scale.pageAlignHorizontally = true;
+                this.game.scale.pageAlignVertically = true;
+                this.game.scale.forceOrientation(true, false);
+            }
+
+            console.log(screenDims);
         }
 
         create() {
-            // Set background to white to make effect clearer
-            this.game.stage.backgroundColor = 0xffffff;
-
-            // Add a function that will get called when the game goes fullscreen
-            this.game.scale.onFullScreenInit.add(CurlingGame.prototype.onGoFullScreen, this);
-
-            // Now add a function that will get called when user taps screen.
-            // Function declared inline using arrow (=>) function expression
-            // Simply calls startFullScreen().  True specifies you want anti aliasing.
-            // Unfortunately you can only make full screen requests in desktop browsers in event handlers
-            this.game.input.onTap.add(
-                () => { this.game.scale.startFullScreen(true); },
-                this);
+            this.game.state.start("TitleScreenState", true, true);
         }
     }
 }
