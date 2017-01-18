@@ -4,19 +4,414 @@
 <head>
     <meta name="viewport" content="height=device-height, user-scalable=no,  initial-scale=1,  maximum-scale=1" />
     <meta charset="utf-8" />
-    <title>TypeScript HTML App</title>
+    <title>Все в кёрлинг!</title>
     <link rel="stylesheet" href="app.css" type="text/css" />
+
     <script src="phaser.js"></script>
-    <script src="swipe.js"></script>
     <script src="app.js"></script>
+
     <style>
-        body {
-            margin: 0px;
-            padding: 0px;
-            background-color: #001640;
-        }
+body {
+    margin: 0px;
+    padding: 0px;
+    background-color: #001640;
+}
+
+/* The Modal (background) */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    padding-top: 10%; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modal-content {
+    position: relative;
+    background-color: #fefefe;
+    margin: auto;
+    padding: 0;
+    border: 1px solid #888;
+    width: 80%;
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+    -webkit-animation-name: animatetop;
+    -webkit-animation-duration: 0.4s;
+    animation-name: animatetop;
+    animation-duration: 0.4s
+}
+
+/* Add Animation */
+@-webkit-keyframes animatetop {
+    from {top:-300px; opacity:0} 
+    to {top:0; opacity:1}
+}
+
+@keyframes animatetop {
+    from {top:-300px; opacity:0}
+    to {top:0; opacity:1}
+}
+
+/* The Close Button */
+.close {
+    color: white;
+    float: right;
+    font-size: 38px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.modal-header{
+    padding: 2px 16px;
+    background-color: #367cde;
+    color: white;
+}
+
+.error {
+    background-color: #e23d10;
+}
+
+.modal-body {padding: 2px 16px;}
+
+.modal-footer {
+    padding: 2px 16px;
+    background-color: #367cde;
+    color: white;
+}
+
+.input-container {
+  position: relative;
+  margin: 0 10px 25px;
+}
+.input-container input {
+  outline: none;
+  z-index: 1;
+  position: relative;
+  background: #f0f0f0;
+  width: 100%;
+  height: 60px;
+  border: 0;
+  color: #212121;
+  font-size: 24px;
+  font-weight: 400;
+}
+.input-container input:focus ~ label {
+  color: #9d9d9d;
+  -webkit-transform: translate(-12%, -50%) scale(0.75);
+          transform: translate(-12%, -50%) scale(0.75);
+}
+.input-container input:focus ~ .bar:before, .input-container input:focus ~ .bar:after {
+  width: 100%;
+}
+.input-container input:valid ~ label {
+  color: #9d9d9d;
+  -webkit-transform: translate(-12%, -50%) scale(0.75);
+          transform: translate(-12%, -50%) scale(0.75);
+}
+.input-container label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: #757575;
+  font-size: 24px;
+  font-weight: 300;
+  line-height: 60px;
+  -webkit-transition: 0.2s ease;
+  transition: 0.2s ease;
+}
+.input-container .bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  background: #757575;
+  width: 100%;
+  height: 1px;
+}
+.input-container .bar:before, .input-container .bar:after {
+  content: '';
+  position: absolute;
+  background: #367cde;
+  width: 0;
+  height: 2px;
+  -webkit-transition: .2s ease;
+  transition: .2s ease;
+}
+.input-container .bar:before {
+  left: 0%;
+}
+.input-container .bar:after {
+  right: 0%;
+}
+
+.button-container {
+  margin: 0 10px 25px;
+  text-align: center;
+}
+.button-container button {
+  outline: 0;
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
+  background: 0;
+  width: 240px;
+  border: 2px solid #e3e3e3;
+  padding: 20px 0;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  overflow: hidden;
+  -webkit-transition: .3s ease;
+  transition: .3s ease;
+}
+
+.button-container button span {
+  position: relative;
+  z-index: 1;
+  color: #78adf6;
+  -webkit-transition: .3s ease;
+  transition: .3s ease;
+}
+.button-container button:before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  background: #367cde;
+  width: 30px;
+  height: 30px;
+  border-radius: 100%;
+  margin: -15px 0 0 -15px;
+  opacity: 0;
+  -webkit-transition: .3s ease;
+  transition: .3s ease;
+}
+.button-container button:hover, .button-container button:active, .button-container button:focus {
+  border-color: #367cde;
+}
+.button-container button:hover span, .button-container button:active span, .button-container button:focus span {
+  color: #367cde;
+}
+.button-container button:active span, .button-container button:focus span {
+  color: #ffffff;
+}
+.button-container button:active:before, .button-container button:focus:before {
+  opacity: 1;
+  -webkit-transform: scale(10);
+  transform: scale(10);
+}
+
+#scores p:first-child {
+    background-color: #f0f0fc;
+}
+
+.rgone {
+    font-family: 'Times New Roman', Times, serif;
+    font-style:normal;
+}
     </style>
 </head>
 <body>
+
+    <div id="saveModal" class="modal">
+
+        <!-- Modal content -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close">&times;</span>
+                <h2>В рекорды!</h2>
+            </div>
+            <div class="modal-body">
+                <p>Здесь необходимо ввести имя, что бы можно было потом узнать, кто это достиг такого результата (<span id="result"></span>)</p>
+                <div class="input-container">
+                    <input type="text" id="Username" required="required" autofocus>
+                    <div class="bar"></div>
+                </div>
+
+                <div class="button-container">
+                    <button id="btnSave"><span>СОХРАНИТЬ</span></button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="scoresModal" class="modal">
+
+        <!-- Modal content -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close">&times;</span>
+                <h2>Рекорды</h2>
+            </div>
+            <div class="modal-body" id="scores">
+            </div>
+        </div>
+
+    </div>
+
+    <div id="errorModalSave" class="modal">
+
+        <!-- Modal content -->
+        <div class="modal-content">
+            <div class="modal-header error">
+                <span class="close">&times;</span>
+                <h2>Ошибка!</h2>
+            </div>
+            <div class="modal-body">
+                <p>Упс! Не получается подключиться к базе данных для сохранения этого выдающегося результата. Гугл подвел!</p>
+                <p>Шлите апельсины бочками, в смысле, достойные результаты скриншотами.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="errorModalScores" class="modal">
+
+        <!-- Modal content -->
+        <div class="modal-content">
+            <div class="modal-header error">
+                <span class="close">&times;</span>
+                <h2>Ошибка!</h2>
+            </div>
+            <div class="modal-body">
+                <p>Упс! Не получается подключиться к базе данных и показать самые выдающиеся результаты. Гугл подвел!</p>
+                <p>Но наверняка можно улучшить! Дерзай! Жми и играй!</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/3.6.5/firebase.js"></script>
+    <script>
+// Initialize Firebase
+var config = {
+    apiKey: "AIzaSyBsxmDG4ZRrO6AmmstGvNyPh-pLK6phYRM",
+    authDomain: "curling-817ad.firebaseapp.com",
+    databaseURL: "https://curling-817ad.firebaseio.com",
+    storageBucket: "curling-817ad.appspot.com",
+    messagingSenderId: "802232820682"
+};
+firebase.initializeApp(config);
+    </script>
+
+    <script>
+function databaseAnonymousAuth(ctx, fnCallback) {
+    if (firebase.auth().currentUser) {
+        fnCallback.apply(ctx);
+        return;
+    }
+
+    firebase.auth().onAuthStateChanged(function (user) {
+        if (user) {
+            console.log("onAuthStateChanged", user);
+            fnCallback.apply(ctx);
+        }
+    });
+
+    firebase.auth().signInAnonymously().catch(function (error) {
+        console.error(error);
+    });
+}
+
+function showNameBox(points, ctx, fnCallback) {
+    if (!firebase.auth().currentUser) {
+        var modal = document.getElementById('errorModalSave');
+        modal.style.display = "block";
+        return;
+    }
+// Get the modal
+    var modal = document.getElementById('saveModal');
+    modal.style.display = "block";
+
+    var resSpan = document.getElementById('result');
+    resSpan.innerHTML = "";
+    resSpan.appendChild(document.createTextNode(points));
+
+    var btnw = document.getElementById('btnSave');
+    btnw.onclick = function () {
+        var txtUsrname = document.getElementById('Username');
+        if (txtUsrname.value == '') {
+            console.log("no name!");
+            return;
+        }
+        var entry = firebase.database().ref('highscores').push();
+        entry.set({
+            pts: points,
+            date: new Date().getTime(),
+            name: txtUsrname.value
+        }).catch(function (error) {
+            console.log(error);
+        });
+
+        modal.style.display = "none";
+        console.log("save with " + entry.key);
+        fnCallback.apply(ctx);
+    }
+}
+
+function showHighscores() {
+    if (!firebase.auth().currentUser) {
+        var modal = document.getElementById('errorModalScores');
+        modal.style.display = "block";
+        return;
+    }
+
+    var count = 11;
+    var modal = document.getElementById('scoresModal');
+    modal.style.display = "block";
+
+    var divScores = document.getElementById('scores');
+    while (divScores.firstChild) {
+        divScores.removeChild(divScores.firstChild);
+    }
+    var options = {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric'
+    };
+
+    var tableRef = firebase.database().ref('highscores').orderByChild("pts").limitToLast(count);
+    tableRef.on('child_added', function (data) {
+        console.log("child_added", data.val(), data.key);
+        var obj = data.val();
+        var d = new Date();
+        d.setTime(obj.date);
+        var nodeP = document.createElement("p");
+        if (!--count) {
+            nodeP.innerHTML = "<span class='rgone'>ROGUE ONE</span> <strong>" + obj.pts + "</strong> !!! (ПРИКИНЬ, КАРЛ!!!)... " + obj.name + " ... " + d.toLocaleString("ru", options);
+        } else {
+            nodeP.innerHTML = "<b>" + obj.pts + "</b> ... " + obj.name + " ... " + d.toLocaleString("ru", options);
+        }
+        divScores.insertBefore(nodeP, divScores.firstChild);
+    });
+}
+
+var spans = document.getElementsByClassName("close");
+// When the user clicks on <span> (x), close the modal
+[].forEach.call(spans, function (el, idx, arr) {
+    el.onclick = function () {
+        var modals = document.getElementsByClassName('modal');
+        [].forEach.call(modals, function (el, idx, arr) {
+            el.style.display = 'none';
+        });
+    }
+});
+    </script>
 </body>
 </html>

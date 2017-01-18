@@ -1,101 +1,4 @@
-﻿module Utils {
-    export class ScreenMetrics {
-        windowWidth: number;
-        windowHeight: number;
-
-        defaultGameWidth: number;
-        defaultGameHeight: number;
-        maxGameWidth: number;
-        maxGameHeight: number
-
-        gameWidth: number;
-        gameHeight: number;
-        scaleX: number;
-        scaleY: number;
-        offsetX: number;
-        offsetY: number;
-    }
-
-    export enum Orientation { PORTRAIT, LANDSCAPE };
-
-    export class ScreenUtils {
-        public static screenMetrics: ScreenMetrics;
-
-        // -------------------------------------------------------------------------
-        public static calculateScreenMetrics(aDefaultWidth: number, aDefaultHeight: number,
-            aOrientation: Orientation = Orientation.LANDSCAPE,
-            aMaxGameWidth?: number, aMaxGameHeight?: number): ScreenMetrics {
-            // get dimension of window
-            let windowWidth: number = window.innerWidth;
-            let windowHeight: number = window.innerHeight;
-            // swap if window dimensions do not match orientation
-            if ((windowWidth < windowHeight && aOrientation === Orientation.LANDSCAPE) ||
-                (windowHeight < windowWidth && aOrientation === Orientation.PORTRAIT)) {
-                let tmp: number = windowWidth;
-                windowWidth = windowHeight;
-                windowHeight = tmp;
-            }
-            // calculate max game dimension. The bounds are iPad and iPhone 
-            if (typeof aMaxGameWidth === "undefined" || typeof aMaxGameHeight === "undefined") {
-                if (aOrientation === Orientation.LANDSCAPE) {
-                    aMaxGameWidth = Math.round(aDefaultWidth * 1420 / 1280);
-                    aMaxGameHeight = Math.round(aDefaultHeight * 960 / 800);
-                } else {
-                    aMaxGameWidth = Math.round(aDefaultWidth * 960 / 800);
-                    aMaxGameHeight = Math.round(aDefaultHeight * 1420 / 1280);
-                }
-            }
-            // default aspect and current window aspect
-            let defaultAspect: number = (aOrientation === Orientation.LANDSCAPE) ? 1280 / 800 : 800 / 1280;
-            let windowAspect: number = windowWidth / windowHeight;
-
-            let offsetX: number = 0;
-            let offsetY: number = 0;
-            let gameWidth: number = 0;
-            let gameHeight: number = 0;
-
-            // if (aOrientation === Orientation.LANDSCAPE) {
-            // "iPhone" landscape ... and "iPad" portrait
-            if (windowAspect > defaultAspect) {
-                gameHeight = aDefaultHeight;
-                gameWidth = Math.ceil((gameHeight * windowAspect) / 2.0) * 2;
-                gameWidth = Math.min(gameWidth, aMaxGameWidth);
-                offsetX = (gameWidth - aDefaultWidth) / 2;
-                offsetY = 0;
-            } else {    // "iPad" landscpae ... and "iPhone" portrait
-                gameWidth = aDefaultWidth;
-                gameHeight = Math.ceil((gameWidth / windowAspect) / 2.0) * 2;
-                gameHeight = Math.min(gameHeight, aMaxGameHeight);
-                offsetX = 0;
-                offsetY = (gameHeight - aDefaultHeight) / 2;
-            }
-
-            // calculate scale
-            let scaleX: number = windowWidth / gameWidth;
-            let scaleY: number = windowHeight / gameHeight;
-            // store values
-            this.screenMetrics = new ScreenMetrics();
-            this.screenMetrics.windowWidth = windowWidth;
-            this.screenMetrics.windowHeight = windowHeight;
-
-            this.screenMetrics.defaultGameWidth = aDefaultWidth;
-            this.screenMetrics.defaultGameHeight = aDefaultHeight;
-            this.screenMetrics.maxGameWidth = aMaxGameWidth;
-            this.screenMetrics.maxGameHeight = aMaxGameHeight;
-
-            this.screenMetrics.gameWidth = gameWidth;
-            this.screenMetrics.gameHeight = gameHeight;
-            this.screenMetrics.scaleX = scaleX;
-            this.screenMetrics.scaleY = scaleY;
-            this.screenMetrics.offsetX = offsetX;
-            this.screenMetrics.offsetY = offsetY;
-
-            return this.screenMetrics;
-        }
-    }
-}
-
-module PhaserSwipe {
+﻿module PhaserSwipe {
     export class Swipe {
         private game: Phaser.Game;
 
@@ -117,15 +20,7 @@ module PhaserSwipe {
             this.game.input.onDown.addOnce(this.BeginSwipe, this);
         }
 
-        TestBegin(e: Phaser.Pointer) {
-            console.log("Swipe.TestBegin", e);
-        }
-        TestEnd(e: Phaser.Pointer) {
-            console.log("SwipeTestEnd", e);
-        }
-
         BeginSwipe(e: Phaser.Pointer) {
-            console.log("BeginSwipe", e);
             this.game.input.onUp.addOnce(this.EndSwipe, this);
         }
 
@@ -178,13 +73,13 @@ module GameCurling {
 
         addRef(cb: Function, ctx: any) {
             this.refs++;
-//            console.log("AW add " + this.refs);
+            //console.log("AW add " + this.refs);
             if (cb !== null && typeof cb == 'function')
                 cb.apply(ctx);
         }
 
         releaseRef(cb: Function, ctx: any) {
-//            console.log("AW release " + this.refs);
+            //console.log("AW release " + this.refs);
             this.refs--;
             if (this.refs == 0 && cb !== null && typeof cb == 'function')
                 cb.apply(ctx);
@@ -207,46 +102,70 @@ module GameCurling {
     };
 
     export class TitleScreenState extends Phaser.State {
-        private spaceKey: Phaser.Key;
-
         private sfx: Phaser.Sound;
 
-        game: Phaser.Game;
+        private btnRules: Phaser.Button;
+        private btnStart: Phaser.Button;
+        private btnHighscoresEnabled: Phaser.Button;
+        private btnHighscoresDisabled: Phaser.Button;
 
         constructor() {
             super();
         }
 
-        preload() {
-            this.game.load.image("title", "res/title.png");
-            this.game.load.audio("click", "res/sfx/battery.mp3");
-        }
-
         create() {
             this.game.add.sprite(0, 0, "title");
-            this.input.onTap.addOnce(this.titleClicked, this);
+            this.sfx = this.game.add.audio("sfx_battery");
 
-            this.spaceKey = this.game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
-            this.spaceKey.onDown.add(this.titleClicked, this);
+            let styleTextCommonButton = { font: "21px monospace", fill: "#fff", align: "center", wordWrap: false, boundsAlignH: "center", boundsAlignV: "middle" };
 
-            this.sfx = this.game.add.audio("click");
+            this.btnRules = this.game.add.button(this.game.world.centerX - 140, 470, 'btn', this.ShowRules, this, 1, 0, 1, 0);
+            let textRules = this.game.add.text(0, 0, "Посмотреть правила", styleTextCommonButton);
+            textRules.setTextBounds(0, 472, this.game.width, 50);
+
+            this.btnHighscoresEnabled = this.game.add.button(this.game.world.centerX - 140, 550, 'btn', this.ShowHighscores, this, 1, 0, 1, 0);
+            this.btnHighscoresEnabled.visible = false;
+            this.btnHighscoresDisabled = this.game.add.button(this.game.world.centerX - 140, 550, 'btn', null, null, 2, 2, 2, 2);
+            let textHighscores = this.game.add.text(0, 0, "Восхищаться рекордами", styleTextCommonButton);
+            textHighscores.setTextBounds(0, 552, this.game.width, 50);
+
+            this.btnStart = this.game.add.button(this.game.world.centerX - 140 * 1.3, 691, 'btn', this.StartGame, this, 1, 0, 1, 0);
+            let styleStart = { font: "40px monospace", fill: "#fff", align: "center", wordWrap: false, boundsAlignH: "center", boundsAlignV: "middle" };
+            let textStart = this.game.add.text(0, 0, "ЖМИ И ИГРАЙ!", styleStart);
+            textStart.setTextBounds(0, 702, this.game.width, 50);
+            this.btnStart.scale.set(1.3);
+
+            window['databaseAnonymousAuth'](this, this.EnableHighscoresButton);
         }
 
-        titleClicked() {
+        StartGame() {
             this.sfx.play();
             this.game.state.start("GameRunningState");
+        }
+
+        ShowRules() {
+            this.sfx.play();
+            this.game.state.start("ShowRulesState");
+        }
+
+        ShowHighscores() {
+            this.sfx.play();
+            window['showHighscores']();
+        }
+
+        EnableHighscoresButton() {
+            console.log("enable hs button");
+            this.btnHighscoresEnabled.visible = true;
+            this.btnHighscoresDisabled.visible = false;
         }
     };
 
     export class EndGameScreenState extends Phaser.State {
-        private spaceKey: Phaser.Key;
+        private btnMenu: Phaser.Button;
+        private btnSave: Phaser.Button;
 
         private sfx: Phaser.Sound;
 
-        game: Phaser.Game;
-        textGameOver: Phaser.Text;
-        textRecord: Phaser.Text;
-        textOverall: Phaser.Text;
         points: number;
 
         constructor() {
@@ -257,38 +176,41 @@ module GameCurling {
             this.points = pts;
         }
 
-        preload() {
-            this.game.load.image("bg", "res/empty.png");
-            this.game.load.audio("click", "res/sfx/battery.mp3");
-
-            this.game.load.text("invite", "res/invite.txt");
-        }
-
         create() {
-            this.game.add.sprite(0, 0, "bg");
-            this.sfx = this.game.add.audio("click");
+            this.game.stage.backgroundColor = "#001640";
+            this.sfx = this.game.add.audio("sfx_battery");
 
             let style = { font: "bold 65px monospace", fill: "#fff", boundsAlignH: "center", boundsAlignV: "middle" };
-            this.textGameOver = this.game.add.text(0, 0, "ВОТ И ВСЕ", style);
-            this.textGameOver.setTextBounds(0, 150, this.game.width, 100);
+            let textGameOver = this.game.add.text(0, 0, "ВОТ И ВСЕ", style);
+            textGameOver.setTextBounds(0, 150, this.game.width, 100);
 
             style.font = "bold 30px monospace";
-            this.textRecord = this.game.add.text(0, 0, "Камней сломалось: " + this.points, style);
-            this.textRecord.setTextBounds(0, 250, this.game.width, 50);
+            let textRecord = this.game.add.text(0, 0, "Камней сломалось: " + this.points, style);
+            textRecord.setTextBounds(0, 250, this.game.width, 50);
 
-            let styleoverall = { font: "20px monospace", fill: "#fff", align: "left", wordWrap: true, wordWrapWidth: this.game.width - 30 };
-            let txt = this.game.cache.getText('invite');
-            this.textRecord = this.game.add.text(30, 350, txt, styleoverall);
+            let styleTextCommonButton = { font: "21px monospace", fill: "#fff", align: "center", wordWrap: false, boundsAlignH: "center", boundsAlignV: "middle" };
 
-            this.input.onTap.addOnce(this.titleClicked, this);
+            this.btnMenu = this.game.add.button(this.game.world.centerX - 140, 600, 'btn', this.GoMainMenu, this, 1, 0, 1, 0);
+            let textMenu = this.game.add.text(0, 0, "Я буду ROGUE ONE!", styleTextCommonButton);
+            textMenu.setTextBounds(0, 602, this.game.width, 50);
 
-            this.spaceKey = this.game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
-            this.spaceKey.onDown.add(this.titleClicked, this);
+            this.btnSave = this.game.add.button(this.game.world.centerX - 140, 400, 'btn', this.SaveResult, this, 1, 0, 1, 0);
+            let textSave = this.game.add.text(0, 0, "Сохранить результат", styleTextCommonButton);
+            textSave.setTextBounds(0, 402, this.game.width, 50);
         }
 
-        titleClicked() {
+        GoMainMenu() {
             this.sfx.play();
             this.game.state.start("TitleScreenState");
+        }
+
+        SaveResult() {
+            if (this.points !== undefined) {
+                this.sfx.play();
+                window['showNameBox'](this.points, this, this.GoMainMenu);
+            } else {
+                this.GoMainMenu();
+            }
         }
     };
 
@@ -329,31 +251,11 @@ module GameCurling {
         spawned: boolean;
 
         cursors: Phaser.CursorKeys;
-//        topLeftRect: Phaser.Rectangle;
-//        topRighRect: Phaser.Rectangle;
-//        bottomRect: Phaser.Rectangle;
         swipe: PhaserSwipe.Swipe;
 
         textValue: Phaser.Text;
         points: number;
 
-        // handle input function
-/*
-        HandleTouchMouse(pointer) {
-            if (this.bottomRect.contains(pointer.x, pointer.y)) {
-//                this.DropRowDown();
-                this.DropBlocks();
-            }
-
-            if (this.topLeftRect.contains(pointer.x, pointer.y)) {
-                this.ShiftRowLeft();
-            }
-
-            if (this.topRighRect.contains(pointer.x, pointer.y)) {
-                this.ShiftRowRight();
-            }
-        }
-*/
         ShiftRowLeft() {
             if (this.lockInput) {
                 return;
@@ -714,30 +616,14 @@ module GameCurling {
             return (arr.filter((csc, idx) => { return csc.x == c.x && csc.y == c.y; }, this).length == 0);
         }
 
-        preload() {
-            this.game.load.image('b0', 'res/square_green.png');
-            this.game.load.image('b1', 'res/square_blue.png');
-            this.game.load.image('b2', 'res/square_red.png');
-            this.game.load.image('b3', 'res/square_stone.png');
-            this.game.load.image('b4', 'res/square_wood.png');
-            this.game.load.image('b5', 'res/square_yellow.png');
-            this.TILE_COLORS = 6;
-
-            this.game.load.image('s0', 'res/square_any.png');
-            this.game.load.image('s1', 'res/bomb.png');
-            this.game.load.image('s2', 'res/line.png');
-
-            this.game.load.image('field', 'res/cfield.png');
-
-            this.game.load.audio("sfx_battery", "res/sfx/battery.mp3");
-            this.game.load.audio("sfx_numkey", "res/sfx/numkey.mp3");
-            this.game.load.audio("sfx_wall", "res/sfx/wall.mp3");
-            this.game.load.audio("sfx_cells", "res/sfx/need_cells.mp3");
-            this.game.load.audio("sfx_pistol", "res/sfx/pistol.mp3");
+        GoToFinalState() {
+            this.game.state.start("EndGameState", true, false, this.points);
         }
 
         create() {
             // constants
+            this.TILE_COLORS = 6;
+
             this.TILE_ROWS = 11;
             this.TILE_COLUMNS = 6;
             this.TILE_SIZE = 64;
@@ -767,12 +653,6 @@ module GameCurling {
             this.swipe.swipeLeft.add(SimpleGame.prototype.ShiftRowLeft, this);
             this.swipe.swipeRight.add(SimpleGame.prototype.ShiftRowRight, this);
 
-//            this.topLeftRect = new Phaser.Rectangle(0, 0, this.game.width / 2, this.game.height / 2);
-//            this.topRighRect = new Phaser.Rectangle(this.game.width / 2 + 1, 0, this.game.width, this.game.height / 2);
-//            this.bottomRect = new Phaser.Rectangle(0, this.game.height / 2 + 1, this.game.width, this.game.height);
-
-//            this.game.input.onDown.add(SimpleGame.prototype.HandleTouchMouse, this);
-
             this.maxRow = 0;
 
             let style = { font: "bold 65px monospace", fill: "#ff0000", align: "right" };
@@ -788,46 +668,138 @@ module GameCurling {
             this.sfxWall = this.game.add.audio("sfx_wall");
             this.sfxCells = this.game.add.audio("sfx_cells");
             this.sfxPistol = this.game.add.audio("sfx_pistol");
+
+            this.lockInput = false;
         }
 
         update() {
+            if (this.lockInput)
+                return;
+
             if (this.maxRow >= this.TILE_ROWS) {
                 this.sfxCells.play();
                 // game over
                 // play animation (remove all blocks in some way)
-                this.game.state.start("EndGameState", true, false, this.points);
+
+                for (let x = 0; x < this.TILE_COLUMNS; x++) {
+                    for (let y = 0; y < this.TILE_ROWS; y++) {
+                        if (!this.field[x] || !this.field[x][y] || this.field[x][y].color < 0)
+                            continue;
+
+                        let spr = this.GetSprite(this.field[x][y].key);
+                        this.TweenSpriteAlpha(spr, null, this.GoToFinalState);
+                    }
+                }
+
                 return;
             }
 
-            // spawn
+            // spawn new row
             if (!this.spawned) {
                 this.GenerateTopBlocks();
                 this.spawned = true;
             }
-
-//            this.game.input.reset();
         }
     }
 
-    export class CurlingGame {
-        game: Phaser.Game;
+    class PreloadAssets extends Phaser.State {
+        private text: Phaser.Text;
+
+        constructor() {
+            super();
+        }
+
+        create() {
+            this.game.stage.backgroundColor = "#001640";
+
+            this.text = this.game.add.text(this.game.width / 2, this.game.height / 2, "Loading", { fill: '#ffffff', align: 'center' });
+
+            this.game.load.onFileComplete.add(this.FileComplete, this);
+            this.game.load.onLoadComplete.add(this.LoadComplete, this);
+
+            // put all assets here
+            this.game.load.image('b0', 'res/square_green.png');
+            this.game.load.image('b1', 'res/square_blue.png');
+            this.game.load.image('b2', 'res/square_red.png');
+            this.game.load.image('b3', 'res/square_stone.png');
+            this.game.load.image('b4', 'res/square_wood.png');
+            this.game.load.image('b5', 'res/square_yellow.png');
+
+            this.game.load.image('s0', 'res/square_any.png');
+            this.game.load.image('s1', 'res/bomb.png');
+            this.game.load.image('s2', 'res/line.png');
+
+            this.game.load.image('field', 'res/cfield.png');
+
+            this.game.load.audio("sfx_battery", "res/sfx/battery.mp3");
+            this.game.load.audio("sfx_numkey", "res/sfx/numkey.mp3");
+            this.game.load.audio("sfx_wall", "res/sfx/wall.mp3");
+            this.game.load.audio("sfx_cells", "res/sfx/need_cells.mp3");
+            this.game.load.audio("sfx_pistol", "res/sfx/pistol.mp3");
+            this.game.load.image("title", "res/title.png");
+            this.game.load.image("rules", "res/rules.png");
+
+            this.game.load.spritesheet('btn', 'res/btn.png', 280, 50);
+
+            this.game.load.start();
+        }
+
+        FileComplete(progress, cacheKey, success, totalLoaded, totalFiles) {
+            this.text.setText("Loading " + progress + "% - " + totalLoaded + " out of " + totalFiles);
+        }
+
+        LoadComplete() {
+            this.game.state.start("TitleScreenState");
+        }
+    }
+
+    class ShowRulesState extends Phaser.State {
+        private btnBack: Phaser.Button;
+
+        constructor() {
+            super();
+        }
+
+        create() {
+            this.game.add.sprite(0, 0, "rules");
+
+            let styleTextCommonButton = { font: "21px monospace", fill: "#fff", align: "center", wordWrap: false, boundsAlignH: "center", boundsAlignV: "middle" };
+
+            this.btnBack = this.game.add.button(this.game.world.centerX - 140, 650, 'btn', this.GoBack, this, 1, 0, 1, 0);
+            let textBack = this.game.add.text(0, 0, "Все понятно", styleTextCommonButton);
+            textBack.setTextBounds(0, 652, this.game.width, 50);
+        }
+
+        GoBack() {
+            this.game.add.audio("sfx_battery").play();
+            this.game.state.start("TitleScreenState");
+        }
+    }
+
+    class CurlingGame extends Phaser.Game {
+        constructor(width?: number | string, height?: number | string, renderer?: number, parent?: any, state?: any, transparent?: boolean, antialias?: boolean, physicsConfig?: any) {
+            super(width, height, renderer, parent, state, transparent, antialias, physicsConfig);
+        }
+    }
+
+    export class CurlingGameLauncher  {
+        game: CurlingGame;
 
         SCREEN_WIDTH: number = 600;
         SCREEN_HEIGHT: number = 800;
 
         constructor() {
-            let screenDims = Utils.ScreenUtils.calculateScreenMetrics(
-                this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Utils.Orientation.PORTRAIT);
-
-            this.game = new Phaser.Game(this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Phaser.AUTO, '', { create: this.create, init: this.init });
+            this.game = new CurlingGame(this.SCREEN_WIDTH, this.SCREEN_HEIGHT, Phaser.AUTO, '', { create: this.create, init: this.init });
 
             this.game.state.add("GameRunningState", SimpleGame, false);
             this.game.state.add("TitleScreenState", TitleScreenState, false);
             this.game.state.add("EndGameState", EndGameScreenState, false);
+            this.game.state.add("PreloadAssets", PreloadAssets, false);
+            this.game.state.add("ShowRulesState", ShowRulesState, false);
         }
 
         init() {
-            this.game.input.maxPointers = 2;
+            this.game.input.maxPointers = 1;
             if (this.game.device.desktop) {
                 this.game.scale.scaleMode = Phaser.ScaleManager.NO_SCALE;
                 this.game.scale.pageAlignHorizontally = true;
@@ -836,39 +808,15 @@ module GameCurling {
             }
         }
 
-        init2() {
-            this.game.input.maxPointers = 1;
-            this.game.stage.disableVisibilityChange = false;
-
-            let screenDims = Utils.ScreenUtils.screenMetrics;
-
-            if (this.game.device.desktop) {
-                console.log("DESKTOP");
-                this.game.scale.scaleMode = Phaser.ScaleManager.NO_SCALE;
-//                this.game.scale.setUserScale(screenDims.scaleX, screenDims.scaleY);
-                  this.game.scale.pageAlignHorizontally = true;
-//                this.game.scale.pageAlignVertically = true;
-            }
-            else {
-                console.log("MOBILE");
-                this.game.scale.scaleMode = Phaser.ScaleManager.USER_SCALE;
-                this.game.scale.setUserScale(screenDims.scaleX, screenDims.scaleY);
-                this.game.scale.pageAlignHorizontally = true;
-                this.game.scale.pageAlignVertically = true;
-                this.game.scale.forceOrientation(true, false);
-            }
-
-            console.log(screenDims);
-        }
-
         create() {
-            this.game.state.start("TitleScreenState", true, true);
+            this.game.stage.backgroundColor = "#001640";
+            this.game.state.start("PreloadAssets", true, true);
         }
     }
 }
 
 window.onload = () => {
 
-    var game = new GameCurling.CurlingGame();
+    var game = new GameCurling.CurlingGameLauncher();
 
 };
