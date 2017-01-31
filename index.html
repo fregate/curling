@@ -395,11 +395,7 @@ function showHighscores() {
         var d = new Date();
         d.setTime(obj.date);
         var nodeP = document.createElement("p");
-        if (!--count) {
-            nodeP.innerHTML = "<span class='rgone'>ROGUE ONE</span> <strong>" + obj.pts + "</strong> !!! (ПРИКИНЬ, КАРЛ!!!)... " + obj.name + " ... " + d.toLocaleString("ru", options);
-        } else {
-            nodeP.innerHTML = "<b>" + obj.pts + "</b> ... " + obj.name + " ... " + d.toLocaleString("ru", options);
-        }
+        nodeP.innerHTML = "<b>" + obj.pts + "</b> ... " + obj.name + " ... " + d.toLocaleString("ru", options);
         divScores.insertBefore(nodeP, divScores.firstChild);
     });
 }
