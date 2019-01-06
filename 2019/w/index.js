@@ -15,7 +15,10 @@ var treeMesh;
 var lastTreeMeshZPosition = 0;
 var treeInstances = 0;
 
-var speedIncrement = 0.01; // speed = currentSpeed + speedIncrement * Math.cos(sledge.rotation.y);
+var currentSpeed = 0.01;
+var speedIncrement = 0.002; // forest speed = currentSpeed + speedIncrement * Math.cos(sledge.rotation.y);
+var currentSledgeSpeed = 0;
+var speedSledgeIncrement = 0.1;
 
 function createTreeRow(scene, offsetZ) {
     var mr = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
@@ -64,14 +67,17 @@ function init() {
         if ((map["q"] || map["Q"])) {
             sledgeMesh.rotation.y = clamp(sledgeMesh.rotation.y + Math.PI / 36, -Math.PI / 2 + Math.PI / 8, Math.PI / 2 - Math.PI / 8);
 //            mainMesh.material.diffuseColor.copyFromFloats(Math.random(), Math.random(), Math.random());
+            currentSledgeSpeed = speedSledgeIncrement * Math.sin(sledgeMesh.rotation.y);
         } else if ((map["E"] || map["e"])) {
             sledgeMesh.rotation.y = clamp(sledgeMesh.rotation.y - Math.PI / 36, -Math.PI / 2 + Math.PI / 8, Math.PI / 2 - Math.PI / 8);
-//            mainMesh.material.diffuseColor.copyFromFloats(Math.random(), Math.random(), Math.random());
+            //            mainMesh.material.diffuseColor.copyFromFloats(Math.random(), Math.random(), Math.random());
+            currentSledgeSpeed = speedSledgeIncrement * Math.sin(sledgeMesh.rotation.y);
         };
     });
 
     scene.registerBeforeRender(function () {
-        treeMesh.position.z -= speedIncrement;
+        treeMesh.position.z -= currentSpeed;
+        sledgeMesh.position.x += currentSledgeSpeed;
 
         if (lastTreeMeshZPosition - treeMesh.position.z < 2)
             return;
@@ -79,6 +85,9 @@ function init() {
         lastTreeMeshZPosition = treeMesh.position.z;
 
         createTreeRow(scene, 32 - treeMesh.position.z);
+
+        // increase speed
+        currentSpeed += speedIncrement * Math.cos(sledgeMesh.rotation.y);
     });
 
 /*
@@ -177,9 +186,12 @@ function createScene(engine) {
 
     assetsManager.onFinish = function (tasks) {
         // create start scene
-        for (var i = -8; i < 34; i += 2) {
+        for (var i = -8; i <= 32; i += 2) {
             createTreeRow(scene, treeMesh.position.z + i);
         }
+
+        currentSledgeSpeed = 0;
+        currentSpeed = 0.01;
 
         engine.runRenderLoop(function () {
             scene.render();
