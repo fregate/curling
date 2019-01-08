@@ -20,6 +20,8 @@ var speedIncrement = 0.002; // forest speed = currentSpeed + speedIncrement * Ma
 var currentSledgeSpeed = 0;
 var speedSledgeIncrement = 0.1;
 
+var shadowGenerator;
+
 function createTreeRow(scene, offsetZ) {
     var mr = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
     var mir = mr.createInstance("itr" + treeInstances);
@@ -27,9 +29,9 @@ function createTreeRow(scene, offsetZ) {
     mir.position = new BABYLON.Vector3(-7, 10, offsetZ);
     mir.rotation = new BABYLON.Vector3(0, Math.PI / 3, 0);
     mir.scaling.scaleInPlace(.8);
+    mir.checkCollisions = true;
 
     treeInstances++;
-
 
     var ml = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
     var mil = ml.createInstance("itr" + treeInstances);
@@ -37,6 +39,7 @@ function createTreeRow(scene, offsetZ) {
     mil.position = new BABYLON.Vector3(7, 10, offsetZ);
     mil.rotation = new BABYLON.Vector3(0, Math.PI / 3, 0);
     mil.scaling.scaleInPlace(.8);
+    mil.checkCollisions = true;
 
     treeInstances++;
 }
@@ -46,6 +49,7 @@ function init() {
     var engine = initEngine();
     //Create a new scene
     var scene = createScene(engine);
+    scene.collisionsEnabled = true;
 
     /****************************Key Control Multiple Keys************************************************/
 
@@ -54,7 +58,6 @@ function init() {
 
     scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, function (evt) {
         map[evt.sourceEvent.key] = evt.sourceEvent.type == "keydown";
-
     }));
 
     scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, function (evt) {
@@ -71,14 +74,17 @@ function init() {
             currentSledgeSpeed = speedSledgeIncrement * Math.sin(sledgeMesh.rotation.y);
         } else if ((map["E"] || map["e"])) {
             sledgeMesh.rotation.y = clamp(sledgeMesh.rotation.y - Math.PI / 36, -Math.PI / 2 + Math.PI / 8, Math.PI / 2 - Math.PI / 8);
-            //            mainMesh.material.diffuseColor.copyFromFloats(Math.random(), Math.random(), Math.random());
+//            mainMesh.material.diffuseColor.copyFromFloats(Math.random(), Math.random(), Math.random());
             currentSledgeSpeed = speedSledgeIncrement * Math.sin(sledgeMesh.rotation.y);
         };
     });
 
     scene.registerBeforeRender(function () {
         treeMesh.position.z -= currentSpeed;
-        sledgeMesh.position.x += currentSledgeSpeed;
+
+//        sledgeMesh.position.x += currentSledgeSpeed;
+        var forwards = new BABYLON.Vector3(currentSledgeSpeed, 0, 0);
+        sledgeMesh.moveWithCollisions(forwards);
 
         if (lastTreeMeshZPosition - treeMesh.position.z < 2)
             return;
@@ -88,7 +94,7 @@ function init() {
         createTreeRow(scene, 32 - treeMesh.position.z);
 
         // increase speed
-        currentSpeed += speedIncrement * Math.cos(sledgeMesh.rotation.y);
+        currentSpeed = clamp(currentSpeed + speedIncrement * Math.cos(sledgeMesh.rotation.y), 0, 1);
     });
 }
 
@@ -110,12 +116,20 @@ function createScene(engine) {
     var scene = new BABYLON.Scene(engine);
 //    var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 1), scene);
 //    light.groundColor = new BABYLON.Color3(1, 1, 1);
-    var light = new BABYLON.DirectionalLight("light", new BABYLON.Vector3(0, -1, 0), scene);
+    var light = new BABYLON.DirectionalLight("light", new BABYLON.Vector3(0, -1, -1), scene);
     light.specular = new BABYLON.Color3(0, 0, 0);
+    light.intensity = 1.2;
 
-//    var shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
+    var light2 = new BABYLON.DirectionalLight("light2", new BABYLON.Vector3(0, -1, -1), scene);
+    light2.specular = new BABYLON.Color3(0, 0, 0);
+    light2.intensity = 1.7;
 
-    engine.enableOfflineSupport = false;
+    shadowGenerator = new BABYLON.ShadowGenerator(1024, light2);
+    shadowGenerator.useBlurExponentialShadowMap = true;
+    //shadowGenerator.usePoissonSampling = true;
+    shadowGenerator.blurBoxOffset = 2.0;
+
+//    engine.enableOfflineSupport = false;
 
     var camera = createCamera(scene);
     camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
@@ -124,7 +138,7 @@ function createScene(engine) {
     camera.orthoLeft = -20;
     camera.orthoRight = 20;
 
-  camera.attachControl(document.getElementById("renderCanvas"), false);
+    //camera.attachControl(document.getElementById("renderCanvas"), false);
 
     // Assets manager
     var assetsManager = new BABYLON.AssetsManager(scene);
@@ -134,6 +148,14 @@ function createScene(engine) {
     sledgeTask.onSuccess = function (task) {
         sledgeMesh = task.loadedMeshes[0];
         sledgeMesh.position = new BABYLON.Vector3(0, 0, -5);
+        sledgeMesh.checkCollisions = true;
+
+        sledgeMesh.onCollide = function (cm) {
+            console.log(cm.name);
+            sledgeMesh.position.x -= currentSledgeSpeed * 10;
+        };
+
+        shadowGenerator.addShadowCaster(sledgeMesh);
     }
 
     var t = assetsManager.addMeshTask("trees", "", "./assets/", "trees.babylon");
