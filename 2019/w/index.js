@@ -13,35 +13,36 @@ Math.degrees = function (radians) {
 var sledgeMesh;
 var treeMesh;
 var lastTreeMeshZPosition = 0;
-var treeInstances = 0;
+var meshInstanses = 0;
+var treeOffset = 7;
 
 var currentSpeed = 0.01;
 var speedIncrement = 0.002; // forest speed = currentSpeed + speedIncrement * Math.cos(sledge.rotation.y);
 var currentSledgeSpeed = 0;
 var speedSledgeIncrement = 0.1;
 
+var treeName = "tr";
+var starName = "star";
+var giftName = "gift";
+
 var shadowGenerator;
+
+function meshInstantinate(mesh, name, pos, rot, s) {
+    var m = mesh.createInstance(name + meshInstanses++);
+    m.parent = treeMesh;
+    m.position = pos;
+    m.rotation = rot;
+    m.scaling.scaleInPlace(s);
+    m.checkCollisions = true;
+    return m;
+}
 
 function createTreeRow(scene, offsetZ) {
     var mr = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
-    var mir = mr.createInstance("itr" + treeInstances);
-    mir.parent = treeMesh;
-    mir.position = new BABYLON.Vector3(-7, 10, offsetZ);
-    mir.rotation = new BABYLON.Vector3(0, Math.PI / 3, 0);
-    mir.scaling.scaleInPlace(.8);
-    mir.checkCollisions = true;
-
-    treeInstances++;
+    meshInstantinate(mr, "tr", new BABYLON.Vector3(-treeOffset, 10, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), .8);
 
     var ml = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
-    var mil = ml.createInstance("itr" + treeInstances);
-    mil.parent = treeMesh;
-    mil.position = new BABYLON.Vector3(7, 10, offsetZ);
-    mil.rotation = new BABYLON.Vector3(0, Math.PI / 3, 0);
-    mil.scaling.scaleInPlace(.8);
-    mil.checkCollisions = true;
-
-    treeInstances++;
+    meshInstantinate(ml, "tr", new BABYLON.Vector3(treeOffset, 10, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), .8);
 }
 
 function init() {
@@ -114,6 +115,7 @@ function initEngine() {
 
 function createScene(engine) {
     var scene = new BABYLON.Scene(engine);
+    scene.shadowsEnabled = true;
 //    var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 1), scene);
 //    light.groundColor = new BABYLON.Color3(1, 1, 1);
     var light = new BABYLON.DirectionalLight("light", new BABYLON.Vector3(0, -1, -1), scene);
@@ -152,7 +154,14 @@ function createScene(engine) {
 
         sledgeMesh.onCollide = function (cm) {
             console.log(cm.name);
-            sledgeMesh.position.x -= currentSledgeSpeed * 10;
+            if (cm.name.startsWith(starName)) {
+                // pick star (reduce speed by half)
+            } else if (cm.name.startsWith(giftName)) {
+                // pick gift (increase points)
+            } else if (cm.name.startsWith(treeName)) {
+                // hit a tree - game over
+                sledgeMesh.position.x -= currentSledgeSpeed * 10;
+            }
         };
 
         shadowGenerator.addShadowCaster(sledgeMesh);
@@ -162,6 +171,13 @@ function createScene(engine) {
     t.onSuccess = function (task) {
         task.loadedMeshes.forEach(function (mesh, idx, arr) {
             mesh.position = new BABYLON.Vector3(0, -10, 0);
+        });
+    }
+
+    var g = assetsManager.addMeshTask("gifts", "", "./assets/", "gifts.babylon");
+    g.onSuccess = function (task) {
+        task.loadedMeshes.forEach(function (mesh, idx, arr) {
+            mesh.convertToFlatShadedMesh();
         });
     }
 
