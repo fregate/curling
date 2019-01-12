@@ -52,11 +52,11 @@ function meshInstantinate(mesh, name, pos, rot, s) {
 
 function createTreeRow(scene, offsetZ) {
     var mr = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
-    var mi = meshInstantinate(mr, "tr", new BABYLON.Vector3(-treeOffset, 10, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), .8);
+    var mi = meshInstantinate(mr, treeName, new BABYLON.Vector3(-treeOffset, 10, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), .8);
     shadowGenerator.addShadowCaster(mi);
 
     var ml = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
-    mi = meshInstantinate(ml, "tr", new BABYLON.Vector3(treeOffset, 10, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), .8);
+    mi = meshInstantinate(ml, treeName, new BABYLON.Vector3(treeOffset, 10, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), .8);
     shadowGenerator.addShadowCaster(mi);
 }
 
@@ -115,11 +115,6 @@ function initEngine() {
     // Initialize the BABYLON 3D engine
     var engine = new BABYLON.Engine(canvas, true);
 
-    // Watch for browser/canvas resize events
-    window.addEventListener("resize", function () {
-        engine.resize();
-    });
-
     return engine;
 }
 
@@ -144,11 +139,25 @@ function createScene(engine) {
 
     var camera = createCamera(scene);
     camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
-    camera.orthoTop = 20;
-    camera.orthoBottom = -25;
-    camera.orthoLeft = -20;
-    camera.orthoRight = 20;
+    var canvas = document.getElementById("renderCanvas");
+    let ratio = canvas.width / canvas.height;
+    let zoom = 20;
+    let width = zoom * ratio;
+    camera.orthoTop = zoom;
+    camera.orthoLeft = -width;
+    camera.orthoRight = width;
+    camera.orthoBottom = -zoom - 5 * ratio;
 
+    // Watch for browser/canvas resize events
+    window.addEventListener("resize", function () {
+        let ratio = canvas.width / canvas.height;
+        let width = zoom * ratio;
+        camera.orthoTop = zoom;
+        camera.orthoLeft = -width;
+        camera.orthoRight = width;
+        camera.orthoBottom = -zoom - 5 * ratio;
+        engine.resize();
+    });
     //camera.attachControl(document.getElementById("renderCanvas"), false);
 
     // Assets manager
@@ -228,15 +237,13 @@ function createScene(engine) {
 
     theWall = BABYLON.MeshBuilder.CreatePlane("theWall", { sideOrientation: BABYLON.Mesh.DOUBLESIDE, updatable: true, width: treeOffset * 4, height: 1 }, scene);
     theWall.position = new BABYLON.Vector3(0, 0, -30);
-    theWall.material = new BABYLON.StandardMaterial("debug_M", scene);
-    theWall.material.diffuseColor = new BABYLON.Color3.Red();
     theWall.checkCollisions = true;
     theWall.actionManager = new BABYLON.ActionManager(scene);
     return scene;
 }
 
 function createCamera(scene) {
-    var camera = new BABYLON.ArcRotateCamera("cam", Math.PI / 2, Math.radians(30), 70, new BABYLON.Vector3(0, 0, 0), scene);
+    var camera = new BABYLON.ArcRotateCamera(cameraName, Math.PI / 2, Math.PI / 6, 70, new BABYLON.Vector3(0, 0, 0), scene);
     return camera;
 }
 
