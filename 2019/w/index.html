@@ -3,6 +3,17 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Babylon - Basic scene</title>
 
+    <link href="https://fonts.googleapis.com/css?family=Spicy+Rice" rel="stylesheet">
+
+    <!--
+    <link href="https://fonts.googleapis.com/css?family=Spicy+Rice|Kelly+Slab|Kurale|Philosopher|Ubuntu+Condensed" rel="stylesheet">
+    font-family: 'Ubuntu Condensed', sans-serif;
+    font-family: 'Philosopher', sans-serif;
+    font-family: 'Kelly Slab', cursive;
+    font-family: 'Kurale', serif;
+    font-family: 'Spicy Rice', cursive;
+    -->
+
     <style>
         html, body {
             overflow: hidden;
@@ -17,12 +28,16 @@
             height: 100%;
             touch-action: none;
         }
+
+    div { font-family: "Spicy Rice"; font-size: 20px; }
     </style>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
     <script src="index.js"></script>
 </head>
 <body>
     <canvas id="renderCanvas"></canvas>
+    <div>hidden</div>
     <script language="javascript">
         init();
     </script>

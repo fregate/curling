@@ -12,15 +12,16 @@ Math.degrees = function (radians) {
 
 var theWall;
 var sledgeMesh;
-var treeMesh;
+var treeMesh = null;
 
 var treeMeshYOffset = 10;
 
 var meshInstanses = 0;
 var treeBlocks;
-var treeOffset = 5;
+var treeOffset = 6;
 
 var currentSpeed = 0;
+var maxSpeed = 0;
 var speedIncrement = 0.002;
 var currentSledgeSpeed = 0;
 var speedSledgeIncrement = 0.1;
@@ -43,7 +44,11 @@ var cameraName = "cam";
 var shadowGenerator;
 
 var aniPickupRotate;
-var aniStarJump;
+
+var pickedText;
+var currentSpeedText;
+var currentDistanceText = null;
+var picked = 0;
 
 function meshInstantinate(mesh, name, root, pos, rot, s) {
     var m = mesh.createInstance(name + meshInstanses++);
@@ -126,7 +131,54 @@ function createStartScene(scene) {
     lastPrizePosition = -i;
 
     currentSledgeSpeed = 0.0001; // for initial pickups
-    currentSpeed = 0.01;
+    maxSpeed = currentSpeed = 0.01;
+
+    // gui
+    var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+    document.fonts.onloadingdone = function (fontFaceSetEvent) {
+        var gridTop = new BABYLON.GUI.Grid();
+        advancedTexture.addControl(gridTop);
+        gridTop.addColumnDefinition(0.33);
+        gridTop.addColumnDefinition(0.33);
+        gridTop.addColumnDefinition(0.33);
+        gridTop.addRowDefinition(1);
+        gridTop.width = "100%";
+        gridTop.height = "40px";
+        gridTop.color = "white";
+        gridTop.background = "#84d8ff";
+        gridTop.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        gridTop.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+
+        pickedText = new BABYLON.GUI.TextBlock();
+        pickedText.text = "" + picked;
+        pickedText.color = "white";
+        pickedText.fontFamily = "Spicy Rice";
+        pickedText.fontSize = 24;
+        pickedText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        pickedText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+        gridTop.addControl(pickedText, 0, 1);
+
+        currentSpeedText = new BABYLON.GUI.TextBlock();
+        currentSpeedText.text = "" + currentSpeed.toFixed(2) + " m/s";
+        currentSpeedText.color = "white";
+        currentSpeedText.fontFamily = "Spicy Rice";
+        currentSpeedText.fontSize = 24;
+        currentSpeedText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        currentSpeedText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        gridTop.addControl(currentSpeedText, 0, 2);
+
+        currentDistanceText = new BABYLON.GUI.TextBlock();
+        currentDistanceText.text = "" + treeMesh.position.z.toFixed(2) + " m";
+        currentDistanceText.color = "white";
+        currentDistanceText.fontFamily = "Spicy Rice";
+        currentDistanceText.fontSize = 24;
+        currentDistanceText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+        currentDistanceText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        gridTop.addControl(currentDistanceText, 0, 0);
+    };
+
+    picked = 0;
 }
 
 function init() {
@@ -160,6 +212,11 @@ function init() {
             sledgeMesh.rotation.y = clamp(sledgeMesh.rotation.y - Math.PI / 36, -Math.PI / 2 + Math.PI / 8, Math.PI / 2 - Math.PI / 8);
             currentSledgeSpeed = speedSledgeIncrement * Math.sin(sledgeMesh.rotation.y);
         };
+
+        if (treeMesh !== null && currentDistanceText !== null) {
+            var dst = -treeMesh.position.z / 10;
+            currentDistanceText.text = "" + dst.toFixed(1) + " m";
+        }
     });
 
     scene.registerBeforeRender(function () {
@@ -177,7 +234,9 @@ function init() {
 
         if (lastSpeedChangePosition - treeMesh.position.z >= checkSpeedChange) {
             lastSpeedChangePosition = treeMesh.position.z;
-            currentSpeed = clamp(currentSpeed + speedIncrement * Math.cos(sledgeMesh.rotation.y), 0, 1);
+            currentSpeed = clamp(currentSpeed + speedIncrement * Math.cos(sledgeMesh.rotation.y), 0, .5);
+            maxSpeed = Math.max(maxSpeed, currentSpeed);
+            currentSpeedText.text = "" + currentSpeed.toFixed(2) + " m/s";
         }
 
         if (lastPrizePosition - treeMesh.position.z >= checkPrize) {
@@ -245,9 +304,8 @@ function createScene(engine) {
         camera.orthoBottom = -zoom - 5 * ratio;
         engine.resize();
     });
-    camera.attachControl(document.getElementById("renderCanvas"), false);
+    //camera.attachControl(document.getElementById("renderCanvas"), false);
 
-    // Assets manager
     var assetsManager = new BABYLON.AssetsManager(scene);
 
     var sledgeTask = assetsManager.addMeshTask("sledge mesh", "", "./assets/", "sledge.babylon");
@@ -259,19 +317,22 @@ function createScene(engine) {
 
         sledgeMesh.onCollide = function (cm) {
             if (cm.name.startsWith(starName)) {
-                // pick star (reduce speed by half)
                 cm.dispose();
-                currentSpeed = currentSpeed / 2;
+                currentSpeed = currentSpeed / 1.5;
+                currentSpeedText.text = "" + currentSpeed.toFixed(2) + " m/s";
             } else if (cm.name.startsWith(giftName)) {
                 // pick gift (increase points)
                 cm.dispose();
-                console.log("pick gift!!!");
+                picked++;
+                pickedText.text = "" + picked;
+
             } else if (cm.name.startsWith(treeName)) {
                 // hit a tree - game over
                 sledgeMesh.position.x = 0;
                 currentSpeed = 0;
                 currentSledgeSpeed = 0;
                 console.log("game over");
+                console.log(maxSpeed);
             }
             sledgeMesh.position.y = 0;
         };
@@ -295,7 +356,6 @@ function createScene(engine) {
         });
     }
 
-    // But you can also do it on the assets manager itself (onTaskSuccess, onTaskError)
     assetsManager.onTaskError = function (task) {
         console.log("error while loading " + task.name);
     }
@@ -310,7 +370,6 @@ function createScene(engine) {
     // Can now change loading background color:
     engine.loadingUIBackgroundColor = "Purple";
 
-    // Just call load to initiate the loading sequence
     assetsManager.load();
 
     var floor = BABYLON.MeshBuilder.CreateGround("floor", { width: 200, height: 400, subdivisions: 1, updatable: false }, scene);
@@ -330,7 +389,6 @@ function createScene(engine) {
     theWall.checkCollisions = true;
     theWall.actionManager = new BABYLON.ActionManager(scene);
 
-    //Create a scaling animation at 15 FPS
     aniPickupRotate = new BABYLON.Animation("A_pickupRotation", "rotation.y", 15, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
     var keysRotate = [];
     keysRotate.push({
@@ -346,22 +404,6 @@ function createScene(engine) {
         value: Math.PI * 2
     });
     aniPickupRotate.setKeys(keysRotate);
-
-    aniStarJump = new BABYLON.Animation("A_starJump", "position.y", 15, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
-    var keysJump = [];
-    keysJump.push({
-        frame: 0,
-        value: treeMeshYOffset
-    });
-    keysJump.push({
-        frame: 15,
-        value: treeMeshYOffset + 2
-    });
-    keysJump.push({
-        frame: 30,
-        value: treeMeshYOffset
-    });
-    aniStarJump.setKeys(keysJump);
 
     return scene;
 }
