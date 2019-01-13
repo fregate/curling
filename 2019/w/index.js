@@ -26,12 +26,13 @@ var speedSledgeIncrement = 0.1;
 var treeName = "tr";
 var starName = "star";
 var giftName = "gift";
+var cameraName = "cam";
 
 var shadowGenerator;
 
-function meshInstantinate(mesh, name, pos, rot, s) {
+function meshInstantinate(mesh, name, root, pos, rot, s) {
     var m = mesh.createInstance(name + meshInstanses++);
-    m.parent = treeMesh;
+    m.parent = root;
     m.position = pos;
     m.rotation = rot;
     m.scaling.scaleInPlace(s);
@@ -52,12 +53,42 @@ function meshInstantinate(mesh, name, pos, rot, s) {
 
 function createTreeRow(scene, offsetZ) {
     var mr = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
-    var mi = meshInstantinate(mr, treeName, new BABYLON.Vector3(-treeOffset, 10, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), .8);
+    var mi = meshInstantinate(mr, treeName, treeMesh, new BABYLON.Vector3(-treeOffset, 10, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), .8);
     shadowGenerator.addShadowCaster(mi);
 
     var ml = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
-    mi = meshInstantinate(ml, treeName, new BABYLON.Vector3(treeOffset, 10, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), .8);
+    mi = meshInstantinate(ml, treeName, treeMesh, new BABYLON.Vector3(treeOffset, 10, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), .8);
     shadowGenerator.addShadowCaster(mi);
+}
+
+function createTreeBlock(scene, offsetX, offsetZ) {
+    var treeHalfRow = 4;
+    var mr = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
+    var trCenter = meshInstantinate(mr, treeName, treeMesh, new BABYLON.Vector3(offsetX, 10, offsetZ), new BABYLON.Vector3(0, 0, 0), 1);
+
+    for (var offx = -treeHalfRow; offx <= treeHalfRow; offx++) {
+        for (var offz = -treeHalfRow; offz <= treeHalfRow; offz++) {
+            if (offx === 0 && offz === 0)
+                continue;
+
+            var mr = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
+            var mi = meshInstantinate(mr, treeName, trCenter, new BABYLON.Vector3(offsetX + offx * 2 - trCenter.position.x, 0, offsetZ + offz * 2 - trCenter.position.z), new BABYLON.Vector3(0, 0, 0), 1);
+        }
+    }
+
+    trCenter.rotation.y = -Math.PI / 4;
+}
+
+function createStartScene(scene) {
+    // create start scene
+    for (var i = -8; i <= 36; i += 2) {
+        createTreeRow(scene, treeMesh.position.z + i);
+    }
+
+    createTreeBlock(scene, treeOffset*2, 10);
+
+    currentSledgeSpeed = 0;
+    currentSpeed = 0.01;
 }
 
 function init() {
@@ -186,6 +217,7 @@ function createScene(engine) {
     var t = assetsManager.addMeshTask("trees", "", "./assets/", "trees.babylon");
     t.onSuccess = function (task) {
         task.loadedMeshes.forEach(function (mesh, idx, arr) {
+            mesh.convertToFlatShadedMesh();
             mesh.position = new BABYLON.Vector3(0, -10, 0);
         });
     }
@@ -204,14 +236,7 @@ function createScene(engine) {
     }
 
     assetsManager.onFinish = function (tasks) {
-        // create start scene
-        for (var i = -8; i <= 36; i += 2) {
-            createTreeRow(scene, treeMesh.position.z + i);
-        }
-
-        currentSledgeSpeed = 0;
-        currentSpeed = 0.01;
-
+        createStartScene(scene);
         engine.runRenderLoop(function () {
             scene.render();
         });
