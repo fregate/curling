@@ -14,16 +14,18 @@ var theWall;
 var sledgeMesh;
 var treeMesh;
 
+var treeMeshYOffset = 10;
+
 var meshInstanses = 0;
 var treeBlocks;
-var treeOffset = 6;
+var treeOffset = 5;
 
-var currentSpeed = 0.01;
+var currentSpeed = 0;
 var speedIncrement = 0.002;
 var currentSledgeSpeed = 0;
 var speedSledgeIncrement = 0.1;
 
-var treeBlockSize = 9; // empirical
+var treeBlockSize = 9;
 
 var lastTreeBlockMeshPosition = 0;
 var lastSpeedChangePosition = 0;
@@ -31,7 +33,7 @@ var lastPrizePosition = 0;
 
 var checkTreeBlock = treeBlockSize;
 var checkSpeedChange = 2;
-var checkPrize = 2;
+var checkPrize = 4;
 
 var treeName = "tr";
 var starName = "star";
@@ -39,6 +41,9 @@ var giftName = "gift";
 var cameraName = "cam";
 
 var shadowGenerator;
+
+var aniPickupRotate;
+var aniStarJump;
 
 function meshInstantinate(mesh, name, root, pos, rot, s) {
     var m = mesh.createInstance(name + meshInstanses++);
@@ -64,7 +69,7 @@ function meshInstantinate(mesh, name, root, pos, rot, s) {
 function createTreeBlock(scene, offsetX, offsetZ) {
     var treeHalfRow = 3;
     var mr = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
-    var trCenter = meshInstantinate(mr, treeName, treeMesh, new BABYLON.Vector3(offsetX, 10, offsetZ), new BABYLON.Vector3(0, 0, 0), 1);
+    var trCenter = meshInstantinate(mr, treeName, treeMesh, new BABYLON.Vector3(offsetX, treeMeshYOffset, offsetZ), new BABYLON.Vector3(0, 0, 0), 1);
     shadowGenerator.addShadowCaster(trCenter);
 
     for (var offx = -treeHalfRow; offx <= treeHalfRow; offx++) {
@@ -81,8 +86,33 @@ function createTreeBlock(scene, offsetX, offsetZ) {
     trCenter.rotation.y = -Math.PI / 4;
 }
 
+function createPrize(scene, offsetZ) {
+    var type = Math.random() < .8 ? 0 : 1;
+    var mesh;
+    var name;
+    if (type === 0) { // prize
+        mesh = scene.getMeshByName("box");
+        name = giftName;
+    } else {
+        mesh = scene.getMeshByName("star");
+        name = starName;
+    }
+    var mi = meshInstantinate(mesh, name, treeMesh, new BABYLON.Vector3((1 - Math.random() * 2) * treeOffset, treeMeshYOffset, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), 1);
+    shadowGenerator.addShadowCaster(mi);
+    mi.animations.push(aniPickupRotate);
+    var aa = scene.beginAnimation(mi, 0, 60, true);
+    aa.goToFrame(Math.random() * 60);
+}
+
 function createStartScene(scene) {
     treeBlocks = -2;
+    // i dont understand why i cant it do through loop!!!
+    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
     createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
     createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
     createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
@@ -90,7 +120,12 @@ function createStartScene(scene) {
     createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
     createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
 
-    currentSledgeSpeed = 0;
+    for (var i = 3; i < 30; i += 4) {
+        createPrize(scene, i);
+    }
+    lastPrizePosition = -i;
+
+    currentSledgeSpeed = 0.0001; // for initial pickups
     currentSpeed = 0.01;
 }
 
@@ -133,7 +168,11 @@ function init() {
 
         if (lastTreeBlockMeshPosition - treeMesh.position.z >= checkTreeBlock) {
             lastTreeBlockMeshPosition = treeMesh.position.z;
-            createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+            createTreeBlock(scene,
+                (treeBlocks++ % 2) == 0
+                    ? ((-1 + Math.random() * 2) + treeOffset) * 2
+                    : -((-1 + Math.random() * 2) + treeOffset) * 2,
+                treeBlocks * treeBlockSize);
         }
 
         if (lastSpeedChangePosition - treeMesh.position.z >= checkSpeedChange) {
@@ -143,7 +182,10 @@ function init() {
 
         if (lastPrizePosition - treeMesh.position.z >= checkPrize) {
             lastPrizePosition = treeMesh.position.z;
-            console.log("create prize");
+            if (Math.random() < .8) {
+                var cam = scene.getCameraByName(cameraName);
+                createPrize(scene, Math.abs(cam.orthoBottom - cam.orthoTop) - lastPrizePosition);
+            }
         }
     });
 }
@@ -203,7 +245,7 @@ function createScene(engine) {
         camera.orthoBottom = -zoom - 5 * ratio;
         engine.resize();
     });
-    //camera.attachControl(document.getElementById("renderCanvas"), false);
+    camera.attachControl(document.getElementById("renderCanvas"), false);
 
     // Assets manager
     var assetsManager = new BABYLON.AssetsManager(scene);
@@ -213,16 +255,25 @@ function createScene(engine) {
         sledgeMesh = task.loadedMeshes[0];
         sledgeMesh.position = new BABYLON.Vector3(0, 0, -5);
         sledgeMesh.checkCollisions = true;
+        //sledgeMesh.showBoundingBox = true;
 
         sledgeMesh.onCollide = function (cm) {
             if (cm.name.startsWith(starName)) {
                 // pick star (reduce speed by half)
+                cm.dispose();
+                currentSpeed = currentSpeed / 2;
             } else if (cm.name.startsWith(giftName)) {
                 // pick gift (increase points)
+                cm.dispose();
+                console.log("pick gift!!!");
             } else if (cm.name.startsWith(treeName)) {
                 // hit a tree - game over
-                sledgeMesh.position.x -= currentSledgeSpeed * 10;
+                sledgeMesh.position.x = 0;
+                currentSpeed = 0;
+                currentSledgeSpeed = 0;
+                console.log("game over");
             }
+            sledgeMesh.position.y = 0;
         };
 
         shadowGenerator.addShadowCaster(sledgeMesh);
@@ -232,7 +283,7 @@ function createScene(engine) {
     t.onSuccess = function (task) {
         task.loadedMeshes.forEach(function (mesh, idx, arr) {
             mesh.convertToFlatShadedMesh();
-            mesh.position = new BABYLON.Vector3(0, -10, 0);
+            mesh.position = new BABYLON.Vector3(0, -treeMeshYOffset, 0);
         });
     }
 
@@ -240,7 +291,7 @@ function createScene(engine) {
     g.onSuccess = function (task) {
         task.loadedMeshes.forEach(function (mesh, idx, arr) {
             mesh.convertToFlatShadedMesh();
-            mesh.position = new BABYLON.Vector3(0, -10, 0);
+            mesh.position = new BABYLON.Vector3(0, -treeMeshYOffset, 0);
         });
     }
 
@@ -271,13 +322,47 @@ function createScene(engine) {
     //floor.visibility = 0;
 
     treeMesh = BABYLON.MeshBuilder.CreateBox("dummy", {}, scene);
-    treeMesh.position.y = -10;
-    lastTreeBlockMeshPosition = lastSpeedChangePosition = lastPrizePosition = treeMesh.position.z;
+    treeMesh.position.y = -treeMeshYOffset;
+    lastTreeBlockMeshPosition = lastSpeedChangePosition = treeMesh.position.z;
 
-    theWall = BABYLON.MeshBuilder.CreatePlane("theWall", { sideOrientation: BABYLON.Mesh.DOUBLESIDE, updatable: true, width: treeOffset * 4, height: 1 }, scene);
+    theWall = BABYLON.MeshBuilder.CreatePlane("theWall", { sideOrientation: BABYLON.Mesh.DOUBLESIDE, updatable: true, width: treeOffset * 10, height: 1 }, scene);
     theWall.position = new BABYLON.Vector3(0, 0, -32);
     theWall.checkCollisions = true;
     theWall.actionManager = new BABYLON.ActionManager(scene);
+
+    //Create a scaling animation at 15 FPS
+    aniPickupRotate = new BABYLON.Animation("A_pickupRotation", "rotation.y", 15, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+    var keysRotate = [];
+    keysRotate.push({
+        frame: 0,
+        value: 0
+    });
+    keysRotate.push({
+        frame: 30,
+        value: Math.PI
+    });
+    keysRotate.push({
+        frame: 60,
+        value: Math.PI * 2
+    });
+    aniPickupRotate.setKeys(keysRotate);
+
+    aniStarJump = new BABYLON.Animation("A_starJump", "position.y", 15, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE);
+    var keysJump = [];
+    keysJump.push({
+        frame: 0,
+        value: treeMeshYOffset
+    });
+    keysJump.push({
+        frame: 15,
+        value: treeMeshYOffset + 2
+    });
+    keysJump.push({
+        frame: 30,
+        value: treeMeshYOffset
+    });
+    aniStarJump.setKeys(keysJump);
+
     return scene;
 }
 
