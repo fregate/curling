@@ -13,15 +13,25 @@ Math.degrees = function (radians) {
 var theWall;
 var sledgeMesh;
 var treeMesh;
-var lastTreeMeshZPosition = 0;
-var treeOffset = 7;
 
 var meshInstanses = 0;
+var treeBlocks;
+var treeOffset = 6;
 
 var currentSpeed = 0.01;
 var speedIncrement = 0.002;
 var currentSledgeSpeed = 0;
 var speedSledgeIncrement = 0.1;
+
+var treeBlockSize = 9; // empirical
+
+var lastTreeBlockMeshPosition = 0;
+var lastSpeedChangePosition = 0;
+var lastPrizePosition = 0;
+
+var checkTreeBlock = treeBlockSize;
+var checkSpeedChange = 2;
+var checkPrize = 2;
 
 var treeName = "tr";
 var starName = "star";
@@ -51,20 +61,11 @@ function meshInstantinate(mesh, name, root, pos, rot, s) {
     return m;
 }
 
-function createTreeRow(scene, offsetZ) {
-    var mr = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
-    var mi = meshInstantinate(mr, treeName, treeMesh, new BABYLON.Vector3(-treeOffset, 10, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), .8);
-    shadowGenerator.addShadowCaster(mi);
-
-    var ml = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
-    mi = meshInstantinate(ml, treeName, treeMesh, new BABYLON.Vector3(treeOffset, 10, offsetZ), new BABYLON.Vector3(0, Math.PI / 3, 0), .8);
-    shadowGenerator.addShadowCaster(mi);
-}
-
 function createTreeBlock(scene, offsetX, offsetZ) {
-    var treeHalfRow = 4;
+    var treeHalfRow = 3;
     var mr = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
     var trCenter = meshInstantinate(mr, treeName, treeMesh, new BABYLON.Vector3(offsetX, 10, offsetZ), new BABYLON.Vector3(0, 0, 0), 1);
+    shadowGenerator.addShadowCaster(trCenter);
 
     for (var offx = -treeHalfRow; offx <= treeHalfRow; offx++) {
         for (var offz = -treeHalfRow; offz <= treeHalfRow; offz++) {
@@ -72,7 +73,8 @@ function createTreeBlock(scene, offsetX, offsetZ) {
                 continue;
 
             var mr = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
-            var mi = meshInstantinate(mr, treeName, trCenter, new BABYLON.Vector3(offsetX + offx * 2 - trCenter.position.x, 0, offsetZ + offz * 2 - trCenter.position.z), new BABYLON.Vector3(0, 0, 0), 1);
+            var mi = meshInstantinate(mr, treeName, trCenter, new BABYLON.Vector3(offsetX + offx * 2 - trCenter.position.x, 0, offsetZ + offz * 2 - trCenter.position.z), new BABYLON.Vector3(0, Math.PI / 2 * Math.random(), 0), 1);
+            shadowGenerator.addShadowCaster(mi);
         }
     }
 
@@ -80,12 +82,13 @@ function createTreeBlock(scene, offsetX, offsetZ) {
 }
 
 function createStartScene(scene) {
-    // create start scene
-    for (var i = -8; i <= 36; i += 2) {
-        createTreeRow(scene, treeMesh.position.z + i);
-    }
-
-    createTreeBlock(scene, treeOffset*2, 10);
+    treeBlocks = -2;
+    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
 
     currentSledgeSpeed = 0;
     currentSpeed = 0.01;
@@ -128,15 +131,20 @@ function init() {
         treeMesh.moveWithCollisions(new BABYLON.Vector3(0, 0, -currentSpeed));
         sledgeMesh.moveWithCollisions(new BABYLON.Vector3(currentSledgeSpeed, 0, 0));
 
-        if (lastTreeMeshZPosition - treeMesh.position.z < 2)
-            return;
+        if (lastTreeBlockMeshPosition - treeMesh.position.z >= checkTreeBlock) {
+            lastTreeBlockMeshPosition = treeMesh.position.z;
+            createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+        }
 
-        lastTreeMeshZPosition = treeMesh.position.z;
+        if (lastSpeedChangePosition - treeMesh.position.z >= checkSpeedChange) {
+            lastSpeedChangePosition = treeMesh.position.z;
+            currentSpeed = clamp(currentSpeed + speedIncrement * Math.cos(sledgeMesh.rotation.y), 0, 1);
+        }
 
-        createTreeRow(scene, 36 - treeMesh.position.z);
-
-        // increase speed
-        currentSpeed = clamp(currentSpeed + speedIncrement * Math.cos(sledgeMesh.rotation.y), 0, 1);
+        if (lastPrizePosition - treeMesh.position.z >= checkPrize) {
+            lastPrizePosition = treeMesh.position.z;
+            console.log("create prize");
+        }
     });
 }
 
@@ -156,7 +164,13 @@ function createScene(engine) {
     light.position = new BABYLON.Vector3(10, 10, 30);
     light.setDirectionToTarget(new BABYLON.Vector3(0, 0, 0));
     light.specular = new BABYLON.Color3(0, 0, 0);
-    light.intensity = 1.7;
+    light.intensity = 1.4;
+
+    light = new BABYLON.DirectionalLight("light", new BABYLON.Vector3(0, -1, -1), scene);
+    light.position = new BABYLON.Vector3(-10, 10, 30);
+    light.setDirectionToTarget(new BABYLON.Vector3(0, 0, 0));
+    light.specular = new BABYLON.Color3(0, 0, 0);
+    light.intensity = 1;
 
     var light2 = new BABYLON.DirectionalLight("light2", new BABYLON.Vector3(0, -1, -1), scene);
     light2.position = new BABYLON.Vector3(-10, 70, -30);
@@ -258,10 +272,10 @@ function createScene(engine) {
 
     treeMesh = BABYLON.MeshBuilder.CreateBox("dummy", {}, scene);
     treeMesh.position.y = -10;
-    lastTreeMeshZPosition = treeMesh.position.z;
+    lastTreeBlockMeshPosition = lastSpeedChangePosition = lastPrizePosition = treeMesh.position.z;
 
     theWall = BABYLON.MeshBuilder.CreatePlane("theWall", { sideOrientation: BABYLON.Mesh.DOUBLESIDE, updatable: true, width: treeOffset * 4, height: 1 }, scene);
-    theWall.position = new BABYLON.Vector3(0, 0, -30);
+    theWall.position = new BABYLON.Vector3(0, 0, -32);
     theWall.checkCollisions = true;
     theWall.actionManager = new BABYLON.ActionManager(scene);
     return scene;
