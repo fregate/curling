@@ -17,7 +17,6 @@ var treeMesh = null;
 var treeMeshYOffset = 10;
 
 var meshInstanses = 0;
-var treeBlocks;
 var treeOffset = 6;
 
 var currentSpeed = 0;
@@ -27,12 +26,12 @@ var currentSledgeSpeed = 0;
 var speedSledgeIncrement = 0.1;
 
 var treeBlockSize = 9;
+var treeOffsetZ;
 
 var lastTreeBlockMeshPosition = 0;
 var lastSpeedChangePosition = 0;
 var lastPrizePosition = 0;
 
-var checkTreeBlock = treeBlockSize;
 var checkSpeedChange = 2;
 var checkPrize = 4;
 
@@ -45,10 +44,12 @@ var shadowGenerator;
 
 var aniPickupRotate;
 
-var pickedText;
-var currentSpeedText;
+var pickedText = null;
+var currentSpeedText = null;
 var currentDistanceText = null;
 var picked = 0;
+
+var treeCollisionGroup = 1;
 
 function meshInstantinate(mesh, name, root, pos, rot, s) {
     var m = mesh.createInstance(name + meshInstanses++);
@@ -64,7 +65,14 @@ function meshInstantinate(mesh, name, root, pos, rot, s) {
                 parameter: m
             },
             function (evt) {
-                evt.additionalData.dispose();
+                if (evt.additionalData.name.endsWith("center")) {
+                    evt.additionalData.position.x = evt.additionalData.position.x > 0
+                        ? ((-1 + Math.random() * 2) + treeOffset) * 2
+                        : -((-1 + Math.random() * 2) + treeOffset) * 2;
+                    evt.additionalData.position.z = treeOffsetZ - treeMesh.position.z;
+                } else if (evt.additionalData.name.startsWith(starName) || evt.additionalData.name.startsWith(giftName)) {
+                    evt.additionalData.dispose();
+                }
             }
         )
     );
@@ -75,6 +83,7 @@ function createTreeBlock(scene, offsetX, offsetZ) {
     var treeHalfRow = 3;
     var mr = scene.getMeshByName("tree0" + Math.ceil(Math.random() + .5));
     var trCenter = meshInstantinate(mr, treeName, treeMesh, new BABYLON.Vector3(offsetX, treeMeshYOffset, offsetZ), new BABYLON.Vector3(0, 0, 0), 1);
+    trCenter.name += "_center";
     shadowGenerator.addShadowCaster(trCenter);
 
     for (var offx = -treeHalfRow; offx <= treeHalfRow; offx++) {
@@ -89,6 +98,7 @@ function createTreeBlock(scene, offsetX, offsetZ) {
     }
 
     trCenter.rotation.y = -Math.PI / 4;
+    return trCenter.position.z;
 }
 
 function createPrize(scene, offsetZ) {
@@ -110,7 +120,7 @@ function createPrize(scene, offsetZ) {
 }
 
 function createStartScene(scene) {
-    treeBlocks = -2;
+    var treeBlocks = -4;
     // i dont understand why i cant it do through loop!!!
     createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
     createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
@@ -123,7 +133,7 @@ function createStartScene(scene) {
     createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
     createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
     createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
-    createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
+    treeOffsetZ = createTreeBlock(scene, (treeBlocks++ % 2) == 0 ? (treeOffset) * 2 : -(treeOffset) * 2, treeBlocks * treeBlockSize);
 
     for (var i = 3; i < 30; i += 4) {
         createPrize(scene, i);
@@ -223,6 +233,7 @@ function init() {
         treeMesh.moveWithCollisions(new BABYLON.Vector3(0, 0, -currentSpeed));
         sledgeMesh.moveWithCollisions(new BABYLON.Vector3(currentSledgeSpeed, 0, 0));
 
+/*
         if (lastTreeBlockMeshPosition - treeMesh.position.z >= checkTreeBlock) {
             lastTreeBlockMeshPosition = treeMesh.position.z;
             createTreeBlock(scene,
@@ -231,12 +242,14 @@ function init() {
                     : -((-1 + Math.random() * 2) + treeOffset) * 2,
                 treeBlocks * treeBlockSize);
         }
+*/
 
         if (lastSpeedChangePosition - treeMesh.position.z >= checkSpeedChange) {
             lastSpeedChangePosition = treeMesh.position.z;
             currentSpeed = clamp(currentSpeed + speedIncrement * Math.cos(sledgeMesh.rotation.y), 0, .5);
             maxSpeed = Math.max(maxSpeed, currentSpeed);
-            currentSpeedText.text = "" + currentSpeed.toFixed(2) + " m/s";
+            if (currentSpeedText !== null)
+                currentSpeedText.text = "" + currentSpeed.toFixed(2) + " m/s";
         }
 
         if (lastPrizePosition - treeMesh.position.z >= checkPrize) {
@@ -304,7 +317,7 @@ function createScene(engine) {
         camera.orthoBottom = -zoom - 5 * ratio;
         engine.resize();
     });
-    //camera.attachControl(document.getElementById("renderCanvas"), false);
+    camera.attachControl(document.getElementById("renderCanvas"), false);
 
     var assetsManager = new BABYLON.AssetsManager(scene);
 
@@ -319,12 +332,14 @@ function createScene(engine) {
             if (cm.name.startsWith(starName)) {
                 cm.dispose();
                 currentSpeed = currentSpeed / 1.5;
-                currentSpeedText.text = "" + currentSpeed.toFixed(2) + " m/s";
+                if (currentSpeedText !== null)
+                    currentSpeedText.text = "" + currentSpeed.toFixed(2) + " m/s";
             } else if (cm.name.startsWith(giftName)) {
                 // pick gift (increase points)
                 cm.dispose();
                 picked++;
-                pickedText.text = "" + picked;
+                if (pickedText !== null)
+                    pickedText.text = "" + picked;
 
             } else if (cm.name.startsWith(treeName)) {
                 // hit a tree - game over
