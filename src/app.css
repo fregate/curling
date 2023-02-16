@@ -1,0 +1,8 @@
+﻿body {
+    font-family: 'Segoe UI', sans-serif;
+}
+
+@font-face {
+	font-family: UiFont;
+	src: url('assets/Comfortaa-VariableFont_wght.ttf');
+}
