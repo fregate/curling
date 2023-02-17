@@ -6,7 +6,7 @@ class AnimationWaiter {
 	private callback: Function;
 	private context;
 
-	constructor(cb: Function, context) {
+	constructor(cb: Function, context?) {
 		this.callback = cb;
 		this.context = context;
 	}
@@ -55,7 +55,6 @@ export default class Curling extends Phaser.Scene {
 
 	private textValue;
 	private points: number;
-
 
 	private shiftRowLeft() {
 		if (this.lockInput) {
@@ -296,13 +295,15 @@ export default class Curling extends Phaser.Scene {
 		});
 
 		this.row.setOrigin(0);
+		let waiter = new AnimationWaiter(() => { this.lockInput = false });
+		let counter = 0;
 		this.row.children.iterate((spr) => {
 			this.tweens.add({
 				targets: spr,
 				y: this.TILE_SPACE,
 				duration: 100,
-				onStart: () => { this.lockInput = true },
-				onComplete: () => { this.lockInput = false }
+				delay: (counter++) * 15,
+				onComplete: () => { waiter.release(); }
 			});
 		}, this);
 
@@ -465,8 +466,8 @@ export default class Curling extends Phaser.Scene {
 						onComplete: () => { waiter.release() },
 						targets: spr,
 						alpha: 0,
-						duration: 150,
-						delay: (counter++) * 150
+						duration: 15,
+						delay: (counter++) * 15
 					}));
 				}
 			}
