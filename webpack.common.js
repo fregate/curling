@@ -1,5 +1,3 @@
-/*global __dirname */
-/* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
@@ -30,10 +28,6 @@ module.exports = {
 		new CleanWebpackPlugin(),
 		new CopyWebpackPlugin({
 			patterns: [
-				{
-					from: './node_modules/phaser/dist/phaser.min.js',
-					to: 'lib'
-				},
 				{
 					from: './src/*.html',
 					to: '[name][ext]'

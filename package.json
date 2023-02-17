@@ -20,9 +20,8 @@
 		"http-server": "^14.1.0"
 	},
 	"scripts": {
-		"build": "webpack --mode production",
-		"build-dev": "webpack --mode none",
-		"start:dev": "webpack-dev-server --mode production",
+		"build": "webpack --mode production --config webpack.prod.js",
+		"build-dev": "webpack --mode development --config webpack.dev.js",
 		"serve": "webpack --mode production && http-server public -c-1 -a localhost -p 8080",
 		"lint": "eslint . --ext .js,.jsx,.ts,.tsx || (exit 0)",
 		"test": "echo \"Error: no test specified\" && exit 1"
