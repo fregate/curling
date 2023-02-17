@@ -6,41 +6,29 @@ export default class Preloader extends Phaser.Scene {
     public preload(): void {
         this.addProgressBar();
 
-		this.load.path = "assets/";
-		// put all assets here
+        this.load.path = "assets/";
+        // put all assets here
         this.load.atlas('stones', 'stones.png', 'stones.json');
         this.load.atlas('button', 'btn.png', 'btn.json');
-		// this.load.image('b0', 'square_green.png');
-		// this.load.image('b1', 'square_blue.png');
-		// this.load.image('b2', 'square_red.png');
-		// this.load.image('b3', 'square_stone.png');
-		// this.load.image('b4', 'square_wood.png');
-		// this.load.image('b5', 'square_yellow.png');
+        // this.load.image('b0', 'square_green.png');
+        // this.load.image('b1', 'square_blue.png');
+        // this.load.image('b2', 'square_red.png');
+        // this.load.image('b3', 'square_stone.png');
+        // this.load.image('b4', 'square_wood.png');
+        // this.load.image('b5', 'square_yellow.png');
 
-		// this.load.image('s0', 'square_any.png');
-		// this.load.image('s1', 'bomb.png');
-		// this.load.image('s2', 'line.png');
+        // this.load.image('s0', 'square_any.png');
+        // this.load.image('s1', 'bomb.png');
+        // this.load.image('s2', 'line.png');
 
-		this.load.image('field', 'cfield.png');
-		this.load.image("title", "title.png");
-		this.load.image("rules", "rules.png");
+        this.load.image('field', 'cfield.png');
+        this.load.image("title", "title.png");
+        this.load.image("rules", "rules.png");
 
-		this.load.audio("sfx_battery", "sfx/battery.mp3");
-		this.load.audio("sfx_wall", "sfx/wall.mp3");
-		this.load.audio("sfx_cells", "sfx/need_cells.mp3");
-		this.load.audio("sfx_pistol", "sfx/pistol.mp3");
-
-		// this.load.image('start_bg', 'start.jpg');
-		// this.load.image('finish_bg', 'end.jpg');
-        // this.load.image('level_bg', 'level.png');
-        // this.load.image('menu_bg', 'menu.png');
-        // this.load.json('level1', 'levels/00001.json');
-        // this.load.json('level2', 'levels/00002.json');
-        // this.load.json('level3', 'levels/00003.json');
-        // this.load.json('level4', 'levels/00004.json');
-        // this.load.json('level5', 'levels/00005.json');
-        // this.load.json('level6', 'levels/00006.json');
-        // this.load.atlas('flares', 'particles/flares.png', 'particles/flares.json');
+        this.load.audio("sfx_battery", "sfx/battery.mp3");
+        this.load.audio("sfx_wall", "sfx/wall.mp3");
+        this.load.audio("sfx_cells", "sfx/need_cells.mp3");
+        this.load.audio("sfx_pistol", "sfx/pistol.mp3");
     }
 
     public create(): void {

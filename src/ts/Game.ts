@@ -1,5 +1,6 @@
 import 'phaser';
 import Curling from './Scenes/Curling';
+import Finish from './Scenes/Finish';
 import GameMenu from './Scenes/GameMenu';
 import Preloader from './Scenes/Preloader';
 
@@ -29,17 +30,7 @@ export default class Game extends Phaser.Game {
 		this.scene.add(Preloader.Name, Preloader);
 		this.scene.add(GameMenu.Name, GameMenu);
 		this.scene.add(Curling.Name, Curling);
-
-		// this.scene.add(MainMenu.Name, MainMenu);
-		// this.scene.add(GameMenu.Name, GameMenu);
-		// this.scene.add(LevelSummary.Name, LevelSummary);
-		// this.scene.add("level1", RunLevel);
-		// this.scene.add("level2", RunLevel);
-		// this.scene.add("level3", RunLevel);
-		// this.scene.add("level4", RunLevel);
-		// this.scene.add("level5", RunLevel);
-		// this.scene.add("level6", RunLevel);
-		// this.registry.set('total', 6);
+		this.scene.add(Finish.Name, Finish);
 
 		this.scene.start(Preloader.Name);
 	}
