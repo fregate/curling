@@ -36,7 +36,6 @@ export default class Curling extends Phaser.Scene {
 
 	private TILE_COLORS: number = 6;
 
-	private maxRow: number = 0;
 	private field: Phaser.GameObjects.GameObject[][]; // TILE_COLUMNS x TILE_ROWS
 
 	private lockInput: boolean = false;
@@ -49,15 +48,13 @@ export default class Curling extends Phaser.Scene {
 	private bonuses: string[];
 
 	private row: Phaser.GameObjects.Group;
-	private spawned: boolean;
 
 	private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
-	// swipe: PhaserSwipe.Swipe;
 
 	private textValue;
 	private points: number;
 
-	private shiftRowLeft() {
+	private shiftRowLeft(): void {
 		if (this.lockInput) {
 			return;
 		}
@@ -76,7 +73,7 @@ export default class Curling extends Phaser.Scene {
 		});
 	}
 
-	private shiftRowRight() {
+	private shiftRowRight(): void {
 		if (this.lockInput) {
 			return;
 		}
@@ -95,7 +92,7 @@ export default class Curling extends Phaser.Scene {
 		});
 	}
 
-	private dropBlocks() {
+	private dropBlocks(): void {
 		if (this.lockInput) {
 			return;
 		}
@@ -122,31 +119,11 @@ export default class Curling extends Phaser.Scene {
 		this.row.clear();
 	}
 
-	private removeEmptySpaces() {
-		this.field.forEach((column, fldidx) => {
-			let counter = 0;
-			column.forEach((tile) => {
-				if (tile.getData("removed") === true) {
-					return;
-				}
-				this.tweens.add({
-					targets: tile,
-					y: this.cameras.main.height - this.TILE_SPACE - (counter * (this.TILE_SPACE + this.TILE_SIZE)) - this.TILE_SIZE,
-					duration: 100,
-					onComplete: () => { this.checkField() }
-				});
-				counter += 1;
-			});
-			const filtered = column.filter((val) => { return val.getData("removed") !== true; });
-			this.field[fldidx] = filtered;
-		});
-	}
-
 	private isTileChecked(tile: Phaser.GameObjects.GameObject): boolean {
 		return tile.getData("used") === true;
 	}
 
-	private checkField() {
+	private checkField(): void {
 		let localPoints: number = 0;
 		for (let x = 0; x < this.TILE_COLUMNS; x++) {
 			for (let y = 0; y < this.TILE_ROWS; y++) {
@@ -174,7 +151,6 @@ export default class Curling extends Phaser.Scene {
 					// check north
 					if ((ccc.y < this.TILE_ROWS - 1) && this.checkColor(ccc.x, ccc.y + 1, stackColor)) {
 						let nc = new Phaser.Geom.Point(ccc.x, ccc.y + 1);
-						// check for not in colorspace
 						if (this.checkFilterFieldCoord(nc, colorspace))
 							stack.push(nc);
 					}
@@ -231,22 +207,23 @@ export default class Curling extends Phaser.Scene {
 	}
 
 	private removeBlocks(cs: Array<Phaser.Geom.Point>): number {
+		let waiter = new AnimationWaiter(this.removeEmptySpaces, this);
 		while (true) {
 			let actionBlocks: Phaser.Geom.Point[] = [];
 			cs.forEach((ccc) => {
 				let spr = this.field[ccc.x][ccc.y];
 				if (spr && this.parseColorFromSprite(spr) >= 0) {
 					actionBlocks = actionBlocks.concat(this.getActionBlocks(ccc, cs));
-					this.tweens.add({
+					waiter.add(this.tweens.add({
 						targets: spr,
 						alpha: 0,
 						duration: 100,
 						onComplete: () => {
 							spr.destroy(true);
 							spr.setData("removed", true);
-							this.removeEmptySpaces();
+							waiter.release();
 						}
-					});
+					}));
 				}
 			});
 
@@ -259,17 +236,64 @@ export default class Curling extends Phaser.Scene {
 		return cs.length;
 	}
 
-	public finishUpdate() {
-		// update max height
-		for (let c = 0; c < this.TILE_COLUMNS; c++) {
-			this.maxRow = Math.max(this.field[c].length, this.maxRow);
-		}
-
-		this.lockInput = false;
-		this.spawned = false;
+	private removeEmptySpaces(): void {
+		let waiter = new AnimationWaiter(this.checkField, this);
+		this.field.forEach((column, fldidx) => {
+			let counter = 0;
+			column.forEach((tile) => {
+				if (tile.getData("removed") === true) {
+					return;
+				}
+				waiter.add(this.tweens.add({
+					targets: tile,
+					y: this.cameras.main.height - this.TILE_SPACE - (counter * (this.TILE_SPACE + this.TILE_SIZE)) - this.TILE_SIZE,
+					duration: 100,
+					onComplete: () => { waiter.release(); }
+				}));
+				counter += 1;
+			});
+			const filtered = column.filter((val) => { return val.getData("removed") !== true; });
+			this.field[fldidx] = filtered;
+		});
 	}
 
-	private generateTopBlocks() {
+	public finishUpdate(): void {
+		let maxRow = 0;
+		for (let c = 0; c < this.TILE_COLUMNS; c++) {
+			maxRow = Math.max(this.field[c].length, maxRow);
+		}
+
+		if (maxRow >= this.TILE_ROWS) {
+			this.lockInput = true;
+			this.sfxCells.play();
+
+			let waiter = new AnimationWaiter(this.finishGame, this);
+			for (let x = 0; x < this.TILE_COLUMNS; x++) {
+				for (let y = 0; y < this.TILE_ROWS; y++) {
+					if (!this.field[x] || !this.field[x][y])
+						continue;
+
+					let spr = this.field[x][y];
+					waiter.add(this.tweens.add({
+						onComplete: () => { waiter.release() },
+						targets: spr,
+						alpha: 0,
+						duration: 300,
+						delay: (this.TILE_ROWS - y) * 100
+					}));
+				}
+			}
+			return;
+		}
+
+		this.generateTopBlocks();
+	}
+
+	private generateTopBlocks(): void {
+		if (this.row.getLength() != 0)
+			return;
+
+		this.lockInput = true;
 		for (let i = 0; i < this.bonuses.length && i < this.TILE_COLUMNS; i++) {
 			let block = this.add.image(0, 0, "stones", this.bonuses[i]);
 			block.setData({
@@ -306,7 +330,7 @@ export default class Curling extends Phaser.Scene {
 				delay: (counter++) * 15,
 				onComplete: () => { waiter.release(); }
 			});
-		}, this);
+		});
 
 		this.bonuses = [];
 	}
@@ -405,7 +429,7 @@ export default class Curling extends Phaser.Scene {
 		return (arr.filter((csc) => { return csc.x == c.x && csc.y == c.y; }).length == 0);
 	}
 
-	private finishGame() {
+	private finishGame(): void {
 		this.field = [];
 		this.scene.start(Finish.Name, { pts: this.points });
 		this.scene.stop();
@@ -419,7 +443,6 @@ export default class Curling extends Phaser.Scene {
 		this.add.image(this.cameras.main.width / 2, 0, "field").setOrigin(0.5, 0);
 		this.row = this.add.group();
 
-		this.spawned = false;
 		this.points = 0;
 		this.field = [];
 		this.bonuses = [];
@@ -436,8 +459,6 @@ export default class Curling extends Phaser.Scene {
 			downCallback: () => { this.dropBlocks() } 
 		});
 
-		this.maxRow = 0;
-
 		let style = { font: "bold 65px UiFont", fill: "#ff0000", align: "right" };
 		this.textValue = this.add.text(0, 0, "0", style);
 
@@ -446,41 +467,6 @@ export default class Curling extends Phaser.Scene {
 		this.sfxCells = this.sound.add("sfx_cells");
 		this.sfxPistol = this.sound.add("sfx_pistol");
 
-		this.lockInput = false;
-	}
-
-	update() {
-		if (this.lockInput)
-			return;
-
-		// check game over
-		if (this.maxRow >= this.TILE_ROWS) {
-			this.lockInput = true;
-			this.sfxCells.play();
-
-			let waiter = new AnimationWaiter(this.finishGame, this);
-			for (let x = 0; x < this.TILE_COLUMNS; x++) {
-				for (let y = 0; y < this.TILE_ROWS; y++) {
-					if (!this.field[x] || !this.field[x][y])
-						continue;
-
-					let spr = this.field[x][y];
-					waiter.add(this.tweens.add({
-						onComplete: () => { waiter.release() },
-						targets: spr,
-						alpha: 0,
-						duration: 300,
-						delay: (this.TILE_ROWS - y) * 100
-					}));
-				}
-			}
-			return;
-		}
-
-		// spawn new row
-		if (!this.spawned) {
-			this.generateTopBlocks();
-			this.spawned = true;
-		}
+		this.generateTopBlocks();
 	}
 }
