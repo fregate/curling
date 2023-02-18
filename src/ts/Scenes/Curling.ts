@@ -1,3 +1,4 @@
+import SwipePlugin from "../Widgets/SwipePlugin";
 import Finish from "./Finish";
 
 class AnimationWaiter {
@@ -410,16 +411,17 @@ export default class Curling extends Phaser.Scene {
 		this.scene.stop();
 	}
 
+	public preload(): void {
+		this.load.plugin('swipe', SwipePlugin, true);
+	}
+
 	public create(): void {
 		this.add.image(this.cameras.main.width / 2, 0, "field").setOrigin(0.5, 0);
 		this.row = this.add.group();
 
 		this.spawned = false;
-
 		this.points = 0;
-
 		this.field = [];
-
 		this.bonuses = [];
 
 		this.cursors = this.input.keyboard.createCursorKeys();
@@ -427,10 +429,12 @@ export default class Curling extends Phaser.Scene {
 		this.cursors.left.on('down', () => this.shiftRowLeft());
 		this.cursors.right.on('down', () => this.shiftRowRight());
 
-		// this.swipe = new PhaserSwipe.Swipe(this.game);
-		// this.swipe.swipeDown.add(SimpleGame.prototype.DropBlocks, this);
-		// this.swipe.swipeLeft.add(SimpleGame.prototype.ShiftRowLeft, this);
-		// this.swipe.swipeRight.add(SimpleGame.prototype.ShiftRowRight, this);
+		let swipe = this.plugins.get('swipe') as SwipePlugin;
+		swipe.attach(this, 25, {
+			leftCallback: () => { this.shiftRowLeft() },
+			rightCallback: () => { this.shiftRowRight() },
+			downCallback: () => { this.dropBlocks() } 
+		});
 
 		this.maxRow = 0;
 
@@ -454,7 +458,6 @@ export default class Curling extends Phaser.Scene {
 			this.lockInput = true;
 			this.sfxCells.play();
 
-			let counter = 0;
 			let waiter = new AnimationWaiter(this.finishGame, this);
 			for (let x = 0; x < this.TILE_COLUMNS; x++) {
 				for (let y = 0; y < this.TILE_ROWS; y++) {
@@ -466,8 +469,8 @@ export default class Curling extends Phaser.Scene {
 						onComplete: () => { waiter.release() },
 						targets: spr,
 						alpha: 0,
-						duration: 15,
-						delay: (counter++) * 15
+						duration: 300,
+						delay: (this.TILE_ROWS - y) * 100
 					}));
 				}
 			}
