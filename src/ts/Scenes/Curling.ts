@@ -62,14 +62,16 @@ export default class Curling extends Phaser.Scene {
 		this.sfxWall.play();
 		let shifted = this.row.getChildren().shift();
 		this.row.add(shifted);
+
+		this.lockInput = true;
+		let waiter = new AnimationWaiter(() => { this.lockInput = false; });
 		this.row.getChildren().forEach((spr, idx) => {
-			this.tweens.add({
+			waiter.add(this.tweens.add({
 				targets: spr,
 				x: this.OFFSET_FIELD + this.TILE_SPACE + idx * (this.TILE_SPACE + this.TILE_SIZE),
 				duration: 100,
-				onStart: () => { this.lockInput = true },
-				onComplete: () => { this.lockInput = false }
-			});
+				onComplete: () => { waiter.release(); }
+			}));
 		});
 	}
 
@@ -81,14 +83,16 @@ export default class Curling extends Phaser.Scene {
 		this.sfxWall.play();
 		let last = this.row.getChildren().pop();
 		this.row.getChildren().unshift(last);
+
+		this.lockInput = true;
+		let waiter = new AnimationWaiter(() => { this.lockInput = false; });
 		this.row.getChildren().forEach((spr, idx) => {
-			this.tweens.add({
+			waiter.add(this.tweens.add({
 				targets: spr,
 				x: this.OFFSET_FIELD + this.TILE_SPACE + idx * (this.TILE_SPACE + this.TILE_SIZE),
 				duration: 100,
-				onStart: () => { this.lockInput = true },
-				onComplete: () => { this.lockInput = false }
-			});
+				onComplete: () => { waiter.release(); }
+			}));
 		});
 	}
 
@@ -320,16 +324,17 @@ export default class Curling extends Phaser.Scene {
 		});
 
 		this.row.setOrigin(0);
-		let waiter = new AnimationWaiter(() => { this.lockInput = false });
+		let waiter = new AnimationWaiter(() => {
+			this.lockInput = false });
 		let counter = 0;
 		this.row.children.iterate((spr) => {
-			this.tweens.add({
+			waiter.add(this.tweens.add({
 				targets: spr,
 				y: this.TILE_SPACE,
 				duration: 100,
 				delay: (counter++) * 15,
 				onComplete: () => { waiter.release(); }
-			});
+			}));
 		});
 
 		this.bonuses = [];
@@ -446,6 +451,8 @@ export default class Curling extends Phaser.Scene {
 		this.points = 0;
 		this.field = [];
 		this.bonuses = [];
+
+		this.lockInput = false;
 
 		this.cursors = this.input.keyboard.createCursorKeys();
 		this.cursors.down.on('down', () => this.dropBlocks());
